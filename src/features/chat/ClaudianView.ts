@@ -75,7 +75,7 @@ export class ClaudianView extends ItemView {
   }
 
   getDisplayText(): string {
-    return 'NewClaudian';
+    return 'nano-claudian';
   }
 
   getIcon(): string {
@@ -230,7 +230,7 @@ export class ClaudianView extends ItemView {
     this.logoEl.appendChild(svg);
 
     // Title text (hidden in header mode when 2+ tabs)
-    this.titleTextEl = this.titleSlotEl.createEl('h4', { text: 'NewClaudian', cls: 'claudian-title-text' });
+    this.titleTextEl = this.titleSlotEl.createEl('h4', { text: 'nano-claudian', cls: 'claudian-title-text' });
 
     // Version text
     this.titleSlotEl.createEl('span', { text: this.plugin.manifest.version, cls: 'claudian-version-text' });
@@ -251,7 +251,7 @@ export class ClaudianView extends ItemView {
     globalActionsEl.style.display = 'flex';
     globalActionsEl.style.alignItems = 'center';
     globalActionsEl.style.gap = '12px';
-    
+
     // Avatar Settings button (gear icon)
     const settingsBtn = globalActionsEl.createDiv({ cls: 'claudian-header-btn' });
     setIcon(settingsBtn, 'settings');

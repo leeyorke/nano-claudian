@@ -22,7 +22,7 @@ const prod = process.argv[2] === 'production';
 const distDir = 'dist';
 const OBSIDIAN_VAULT = process.env.OBSIDIAN_VAULT;
 const OBSIDIAN_PLUGIN_PATH = OBSIDIAN_VAULT && existsSync(OBSIDIAN_VAULT)
-  ? path.join(OBSIDIAN_VAULT, '.obsidian', 'plugins', 'NewClaudian')
+  ? path.join(OBSIDIAN_VAULT, '.obsidian', 'plugins', 'nano-claudian')
   : null;
 
 function copyBuildFiles(files, sourceDir, targetDir) {

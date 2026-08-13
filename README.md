@@ -1,308 +1,165 @@
-# NewClaudian
+# nano-claudian
 
-[English](README.md) | [中文](README_zh.md)
+![GitHub stars](https://img.shields.io/github/stars/leeyorke/nano-claudian?style=social)
+![GitHub release](https://img.shields.io/github/v/release/leeyorke/nano-claudian)
+![License](https://img.shields.io/github/license/leeyorke/nano-claudian)
 
-![GitHub stars](https://img.shields.io/github/stars/laoshi1991/NewClaudian?style=social)
-![GitHub release](https://img.shields.io/github/v/release/laoshi1991/NewClaudian)
-![License](https://img.shields.io/github/license/laoshi1991/NewClaudian)
+一个将 Claude Code 作为 AI 协作者嵌入到你 Vault（知识库）中的 Obsidian 插件。你的 Vault 将成为 Claude 的工作目录，赋予它完全的智能代理（Agentic）能力：文件读写、搜索、Bash 命令执行以及多步骤工作流。
 
-![Preview](Preview.png)
 
-An Obsidian plugin that embeds Claude Code as an AI collaborator in your vault. Your vault becomes Claude's working directory, giving it full agentic capabilities: file read/write, search, bash commands, and multi-step workflows.
+nano-claudian 建立在两个上游项目之上。
+- [Claudian](https://github.com/YishenTu/claudian)。基础版本。
+- [NewClaudian](https://github.com/laoshi1991/NewClaudian)。`Claudian` 的精简版，并增加了一些功能，如会话保存为文件，切换模型等。
 
-> **Note:** This project is a fork and enhanced version based on the original [YishenTu/claudian](https://github.com/YishenTu/claudian) project.
+感谢 Yishen Tu、laoshi1991 以及两个项目的社区贡献者。
 
-## Features
+本仓库同时包含原创代码、Claudian 的 MIT 许可代码和 NewClaudian 的许可代码。重新分发或修改需遵守其上游许可证义务。
 
-### ✨ New in NewClaudian
+## nano-claudian 与 Claudian 有何不同
 
-#### 2.1.9 New Features
+nano-claudian 裁剪了原来 Claudian 支持的 codex, pi 等 agent 选项。只支持 claude code cli。
+可以把整个 session 都保存 markdown 文件到 obsidian。
 
-- **New Session Saving Functionality**: Added a button to save the entire session's content to the knowledge base.
-- **Default Build Location**: Defaults to `dist/`.
+### 如何选择？
 
-#### v2.1.8之前
+| 项目 | 选择理由 |
+| -- | -- |
+|nano-claudian|只使用claude code, 想把整个session都保存到obsidian|
+|NewClaudian|只使用claude code, 想要把某个输出保存到obsidian|
+|Claudian|平时使用其他agent,如codex, Gemini cli, pi等，不需要保存会话|
 
-- **Full-Format File & Folder Interaction**: Massively enhanced the chat input's drag-and-drop and interactive capabilities:
-  - **Mixed Text & File Inline Layout**: The chat input has been entirely refactored to support a true rich-text experience. Files and folders can be dragged and dropped or inserted via `@` mentions **directly inline** with your text at any cursor position. You can select, copy, or intuitively delete these file chips using the `Backspace` key, just like regular text.
-  - **Recursive Folder Parsing**: Directly drag and drop entire folders (from the OS or file tree) into the chat box. The system automatically parses the nested hierarchy and files recursively to import them as context in bulk.
-  - **Smart Differentiated Icons**: Dragged-in context files and file references in chat history now dynamically display specific, recognizable colored icons based on their file extensions (supporting 15+ formats like .ts, .vue, .md, .pdf, .zip, audio/video). Empty and non-empty folders are also visually distinguished by color.
-- **Save AI Responses to Notes**: Seamlessly save high-quality AI answers as independent Markdown notes in your Vault with a single click. The system automatically leverages LLMs to generate concise, contextual filenames **dynamically based on your current UI language (i18n)**, ensuring the generated titles match your native language habits perfectly.
-- **Custom Avatars**: Personalize your workspace by setting custom avatars for both the user and the AI assistant.
-- **Custom Models & Skills Selection**: Easily select and switch between your configured custom models and specialized skills directly from the interface.
-- **Quick Scroll to Bottom**: Added a convenient floating button to instantly scroll to the latest messages at the bottom of the chat.
-- **Comprehensive Multilingual Support (i18n)**: Deeply optimized internationalization. Fully supports 10 languages including English, Simplified Chinese, Traditional Chinese, Japanese, Korean, French, German, Russian, Spanish, and Portuguese. All interactive buttons, modals, and tooltips are localized to provide a seamless immersive experience for global users.
+### nano-claudian 新增功能
 
-### 🚀 Core Features (from original claudian)
+- **新增会话保存功能**：新增按钮，可以将整个 session 的内容全部保存到知识库中。
+- **默认构建位置**：如果你自行开发，默认会构建到 `dist/`。
+- 修复一些莫名其妙的界面显示问题。
 
-- **Full Agentic Capabilities**: Leverage Claude Code's power to read, write, and edit files, search, and execute bash commands, all within your Obsidian vault.
-- **Context-Aware**: Automatically attach the focused note, mention files with `@`, exclude notes by tag, include editor selection (Highlight), and access external directories for additional context.
-- **Vision Support**: Analyze images by sending them via drag-and-drop, paste, or file path.
-- **Inline Edit**: Edit selected text or insert content at cursor position directly in notes with word-level diff preview and read-only tool access for context.
-- **Instruction Mode (`#`)**: Add refined custom instructions to your system prompt directly from the chat input, with review/edit in a modal.
-- **Slash Commands**: Create reusable prompt templates triggered by `/command`, with argument placeholders, `@file` references, and optional inline bash substitutions.
-- **Skills**: Extend NewClaudian with reusable capability modules that are automatically invoked based on context, compatible with Claude Code's skill format.
-- **Custom Agents**: Define custom subagents that Claude can invoke, with support for tool restrictions and model overrides.
-- **Claude Code Plugins**: Enable Claude Code plugins installed via the CLI, with automatic discovery from `~/.claude/plugins` and per-vault configuration. Plugin skills, agents, and slash commands integrate seamlessly.
-- **MCP Support**: Connect external tools and data sources via Model Context Protocol servers (stdio, SSE, HTTP) with context-saving mode and `@`-mention activation.
-- **Advanced Model Control**: Select between Haiku, Sonnet, and Opus, configure custom models via environment variables, fine-tune thinking budget, and enable Opus and Sonnet with 1M context window (requires Max subscription or extra usage).
-- **Plan Mode**: Toggle plan mode via Shift+Tab in the chat input. NewClaudian explores and designs before implementing, presenting a plan for approval with options to approve in a new session, continue in the current session, or provide feedback.
-- **Security**: Permission modes (YOLO/Safe/Plan), safety blocklist, and vault confinement with symlink-safe checks.
-- **Claude in Chrome**: Allow Claude to interact with Chrome through the `claude-in-chrome` extension.
+### NewClaudian 支持功能
 
-## Requirements
+- **全格式文件与文件夹交互**：大幅增强了聊天输入框的拖拽与交互能力：
+  - **图文流式混合布局**：重构了聊天输入框，支持将文件、文件夹像文字一样**直接内联插入**到文本的任意位置。文件和文字实现真正的混合流式排版，并且支持使用光标框选、复制或使用退格键 (`Backspace`) 直接删除文件标签，提供如原生富文本编辑器般丝滑的体验。
+  - **递归文件夹解析**：直接将整个文件夹（从操作系统或文件树）拖入聊天框中。系统会自动递归解析文件夹内的嵌套层级和文件，批量引入作为上下文。
+  - **智能差异化图标**：无论是拖入的文件还是聊天记录中的文件引用，都会根据其文件扩展名（支持超过 15 种格式，如 .ts, .vue, .md, .pdf, .zip, 音视频等）动态渲染专属的彩色小图标。空文件夹与含文件的文件夹也能通过颜色直观区分。
+- **AI 对话保存为笔记**：支持将 AI 的高质量回答一键无缝保存为 Vault 中的独立 Markdown 笔记。系统会自动根据你当前 Obsidian 的界面语言（i18n），调用大模型动态生成完全符合你母语习惯的精准短标题作为文件名，还可以通过原生的模糊搜索界面自由选择想要保存到的目标文件夹。
+- **自定义头像**：通过为用户和 AI 助手设置自定义头像，个性化你的工作空间。
+- **自定义模型与 Skill 选择**：在界面中轻松选择和切换已配置好的自定义模型以及专门的 Skills。
+- **快速回到底部**：增加了一个便捷的悬浮按钮，可以瞬间滚动到聊天框底部的最新消息处。
+- **全面多语言支持 (i18n)**：深度优化了插件的国际化体验。全面支持简体中文、繁体中文、英语、日语、韩语、法语、德语、俄语、西班牙语和葡萄牙语等 10 种语言，所有的交互按钮、弹窗提示及悬浮文案均已实现母语化，为全球用户提供无缝的沉浸式体验。
 
-- [Claude Code CLI](https://code.claude.com/docs/en/overview) installed (strongly recommend install Claude Code via Native Install)
+### claudian 支持功能
+
+- **完全的 Agent 能力**：利用 Claude Code 的强大功能，在你的 Obsidian Vault 内读取、写入和编辑文件、搜索以及执行 Bash 命令。
+- **上下文感知**：自动附加当前聚焦的笔记，使用 `@` 提及文件，通过标签排除特定笔记，包含编辑器中的选中文本（Highlight），并支持访问外部目录获取额外上下文。
+- **视觉支持**：通过拖放、粘贴或文件路径发送图片来进行图像分析。
+- **内联编辑（Inline Edit）**：选中一段文本，或在光标位置通过快捷键触发，直接在笔记中进行带单词级差异预览的编辑，并以只读模式访问工具获取上下文。
+- **指令模式 (`#`)**：直接从聊天输入框中将精炼后的自定义指令添加到系统提示词（System Prompt）中，并支持在模态框中进行预览/编辑。
+- **斜杠命令（Slash Commands）**：通过 `/command` 触发可复用的提示词模板，支持参数占位符、`@file` 文件引用，以及可选的内联 Bash 替换。
+- **Skills 技能**：使用可复用的能力模块扩展 nano-claudian，基于上下文自动调用，并与 Claude Code 的 skill 格式完全兼容。
+- **自定义 Agent**：定义 Claude 可以调用的自定义子代理（subagents），支持工具权限限制和模型覆盖。
+- **Claude Code 插件支持**：启用通过 CLI 安装的 Claude Code 插件，支持从 `~/.claude/plugins` 自动发现，并可按 Vault 进行独立配置。插件中的 Skills、Agents 和斜杠命令均可无缝集成。
+- **MCP 支持**：通过 Model Context Protocol 服务器（stdio、SSE、HTTP）连接外部工具和数据源，支持上下文保存模式及 `@` 提及激活。
+- **高级模型控制**：在 Haiku、Sonnet 和 Opus 之间自由选择，通过环境变量配置自定义模型，微调思考预算（thinking budget），并启用支持 1M 上下文窗口的 Opus 和 Sonnet（需要 Max 订阅或额外使用额度）。
+- **计划模式（Plan Mode）**：在聊天输入框中通过 `Shift+Tab` 切换计划模式。nano-claudian 会在实施前进行探索和设计，向你展示一个可供批准的计划，并提供在新会话中批准、在当前会话中继续或提供反馈的选项。
+- **安全性**：多重权限模式（YOLO/安全/计划），安全黑名单，以及通过符号链接安全检查实现的 Vault 隔离。
+- **Claude in Chrome**：允许 Claude 通过 `claude-in-chrome` 浏览器扩展与 Chrome 交互。
+
+## 环境要求
+
+- 已安装 [Claude Code CLI](https://code.claude.com/docs/en/overview)（强烈建议通过原生方式安装 Claude Code）
 - Obsidian v1.8.9+
-- Claude subscription/API or Custom model provider that supports Anthropic API format ([Openrouter](https://openrouter.ai/docs/guides/guides/claude-code-integration), [Kimi](https://platform.moonshot.ai/docs/guide/agent-support), [GLM](https://docs.z.ai/devpack/tool/claude), [DeepSeek](https://api-docs.deepseek.com/guides/anthropic_api), etc.)
-- Desktop only (macOS, Linux, Windows)
+- Claude 订阅/API，或支持 Anthropic API 格式的自定义模型提供商（如 [Openrouter](https://openrouter.ai/docs/guides/guides/claude-code-integration)、[Kimi](https://platform.moonshot.ai/docs/guide/agent-support)、[GLM](https://docs.z.ai/devpack/tool/claude)、[DeepSeek](https://api-docs.deepseek.com/guides/anthropic_api) 等）
+- 仅支持桌面端（macOS, Linux, Windows）
 
-## Installation
+## 安装指南
 
-### From GitHub Release (recommended)
+### 通过 GitHub Release 安装（推荐）
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/laoshi1991/NewClaudian/releases/latest)
-2. Create a folder called `NewClaudian` in your vault's plugins folder:
+1. 从 [最新 Release 页面](https://github.com/leeyorke/nano-claudian/releases/latest) 下载 `main.js`、`manifest.json` 和 `styles.css`。
+2. 在你 Vault 的 plugins 文件夹下创建一个名为 `nano-claudian` 的文件夹：
    ```
-   /path/to/vault/.obsidian/plugins/NewClaudian/
+   /path/to/vault/.obsidian/plugins/nano-claudian/
    ```
-3. Copy the downloaded files into the `NewClaudian` folder
-4. Enable the plugin in Obsidian:
-   - Settings → Community plugins → Enable "NewClaudian"
+3. 将下载的文件复制到 `nano-claudian` 文件夹中。
+4. 在 Obsidian 中启用插件：
+   - 设置 → 第三方插件（Community plugins） → 启用 "nano-claudian"
 
-### Using BRAT
+### 使用 BRAT 插件安装
 
-[BRAT](https://github.com/TfTHacker/obsidian42-brat) (Beta Reviewers Auto-update Tester) allows you to install and automatically update plugins directly from GitHub.
+[BRAT](https://github.com/TfTHacker/obsidian42-brat) (Beta Reviewers Auto-update Tester) 允许你直接从 GitHub 安装并自动更新插件。
 
-1. Install the BRAT plugin from Obsidian Community Plugins
-2. Enable BRAT in Settings → Community plugins
-3. Open BRAT settings and click "Add Beta plugin"
-4. Enter the repository URL: `https://github.com/laoshi1991/NewClaudian`
-5. Click "Add Plugin" and BRAT will install NewClaudian automatically
-6. Enable NewClaudian in Settings → Community plugins
+1. 从 Obsidian 第三方插件市场安装 BRAT 插件。
+2. 在 设置 → 第三方插件 中启用 BRAT。
+3. 打开 BRAT 设置，点击 "Add Beta plugin"。
+4. 输入仓库 URL：`https://github.com/leeyorke/nano-claudian`
+5. 点击 "Add Plugin"，BRAT 将自动安装 nano-claudian。
+6. 在 设置 → 第三方插件 中启用 nano-claudian。
 
-> **Tip**: BRAT will automatically check for updates and notify you when a new version is available.
+> **提示**：BRAT 会自动检查更新，并在有新版本时通知你。
 
-### From source (development)
+### 源码编译安装（开发者）
 
-1. Clone this repository into your vault's plugins folder:
+1. 将本仓库克隆到你 Vault 的 plugins 文件夹中：
    ```bash
    cd /path/to/vault/.obsidian/plugins
-   git clone https://github.com/laoshi1991/NewClaudian.git
-   cd NewClaudian
+   git clone https://github.com/leeyorke/nano-claudian.git
+   cd nano-claudian
    ```
 
-2. Install dependencies and build:
+2. 安装依赖并构建：
    ```bash
    npm install
    npm run build
    ```
 
-3. Enable the plugin in Obsidian:
-   - Settings → Community plugins → Enable "NewClaudian"
+3. 在 Obsidian 中启用插件：
+   - 设置 → 第三方插件 → 启用 "nano-claudian"
 
-### Development
+### 开发模式
 
 ```bash
-# Watch mode
+# 监听模式 (Watch mode)
 npm run dev
 
-# Production build
+# 生产环境构建 (Production build)
 npm run build
 ```
 
-> **Tip**: Copy `.env.local.example` to `.env.local` or `npm install` and setup your vault path to auto-copy files during development.
+> **提示**：复制 `.env.local.example` 并重命名为 `.env.local`，或者配置你的 Vault 路径，即可在开发期间实现文件的自动复制（热更新）。
 
-## Usage
+## 使用说明
 
-**Two modes:**
-1. Click the bot icon in ribbon or use command palette to open chat
-2. Select text + hotkey for inline edit
+**两种模式：**
+1. 点击左侧 Ribbon 栏的机器人图标，或使用命令面板打开聊天侧边栏。
+2. 选中文本 + 快捷键，触发内联编辑（Inline edit）。
 
-Use it like Claude Code—read, write, edit, search files in your vault.
+像使用 Claude Code 一样使用它——在你的 Vault 中读取、写入、编辑和搜索文件。
 
-### Context
+### 上下文管理
 
-- **File**: Auto-attaches focused note; type `@` to attach other files
-- **@-mention dropdown**: Type `@` to see MCP servers, agents, external contexts, and vault files
-  - `@Agents/` shows custom agents for selection
-  - `@mcp-server` enables context-saving MCP servers
-  - `@folder/` filters to files from that external context (e.g., `@workspace/`)
-  - Vault files shown by default
-- **Selection**: Select text in editor, or elements in canvas, then chat—selection included automatically
-- **Images**: Drag-drop, paste, or type path; configure media folder for `![[image]]` embeds
-- **External contexts**: Click folder icon in toolbar for access to directories outside vault
+- **当前文件**：自动附加当前聚焦的笔记；输入 `@` 可附加其他文件。
+- **@-提及 下拉菜单**：输入 `@` 查看 MCP 服务器、Agents、外部上下文和 Vault 内的文件。
+  - `@Agents/`：显示可供选择的自定义 Agents。
+  - `@mcp-server`：启用具备上下文保存模式的 MCP 服务器。
+  - `@folder/`：过滤并显示来自该外部上下文的文件（例如 `@workspace/`）。
+  - 默认显示 Vault 内的文件。
+- **内容选中**：在编辑器中选中文本，或在 Canvas 白板中选中元素，然后发送聊天——选中内容将自动包含在内。
+- **图片支持**：拖放、粘贴或输入路径；可配置媒体文件夹以支持 `![[image]]` 嵌入语法。
+- **外部上下文**：点击工具栏的文件夹图标，访问 Vault 外部的目录。
 
-### Features
+## 隐私与数据使用
 
-- **Inline Edit**: Select text + hotkey to edit directly in notes with word-level diff preview
-- **Instruction Mode**: Type `#` to add refined instructions to system prompt
-- **Slash Commands**: Type `/` for custom prompt templates or skills
-- **Skills**: Add `skill/SKILL.md` files to `~/.claude/skills/` or `{vault}/.claude/skills/`, recommended to use Claude Code to manage skills
-- **Custom Agents**: Add `agent.md` files to `~/.claude/agents/` (global) or `{vault}/.claude/agents/` (vault-specific); select via `@Agents/` in chat, or prompt NewClaudian to invoke agents
-- **Claude Code Plugins**: Enable plugins via Settings → Claude Code Plugins, recommended to use Claude Code to manage plugins
-- **MCP**: Add external tools via Settings → MCP Servers; use `@mcp-server` in chat to activate
+- **发送至 API 的内容**：你的输入内容、附加的文件、图片以及工具调用输出。默认：Anthropic；可通过 `ANTHROPIC_BASE_URL` 配置自定义端点。
+- **本地存储**：设置、会话元数据和命令存储在 `vault/.claude/` 中；会话消息存储在 `~/.claude/projects/` 中（SDK原生）；旧版会话存储在 `vault/.claude/sessions/` 中。
+- **无遥测（No telemetry）**：除了你配置的 API 提供商之外，没有任何追踪代码。
 
-## Configuration
+## 许可证
 
-### Settings
+本项目基于 [MIT 许可证](LICENSE) 开源。
 
-**Customization**
-- **User name**: Your name for personalized greetings
-- **Excluded tags**: Tags that prevent notes from auto-loading (e.g., `sensitive`, `private`)
-- **Media folder**: Configure where vault stores attachments for embedded image support (e.g., `attachments`)
-- **Custom system prompt**: Additional instructions appended to the default system prompt (Instruction Mode `#` saves here)
-- **Enable auto-scroll**: Toggle automatic scrolling to bottom during streaming (default: on)
-- **Auto-generate conversation titles**: Toggle AI-powered title generation after the first user message is sent
-- **Title generation model**: Model used for auto-generating conversation titles (default: Auto/Haiku)
-- **Vim-style navigation mappings**: Configure key bindings with lines like `map w scrollUp`, `map s scrollDown`, `map i focusInput`
+## 致谢
 
-**Hotkeys**
-- **Inline edit hotkey**: Hotkey to trigger inline edit on selected text
-- **Open chat hotkey**: Hotkey to open the chat sidebar
-
-**Slash Commands**
-- Create/edit/import/export custom `/commands` (optionally override model and allowed tools)
-
-**MCP Servers**
-- Add/edit/verify/delete MCP server configurations with context-saving mode
-
-**Claude Code Plugins**
-- Enable/disable Claude Code plugins discovered from `~/.claude/plugins`
-- User-scoped plugins available in all vaults; project-scoped plugins only in matching vault
-
-**Safety**
-- **Load user Claude settings**: Load `~/.claude/settings.json` (user's Claude Code permission rules may bypass Safe mode)
-- **Enable command blocklist**: Block dangerous bash commands (default: on)
-- **Blocked commands**: Patterns to block (supports regex, platform-specific)
-- **Allowed export paths**: Paths outside the vault where files can be exported (default: `~/Desktop`, `~/Downloads`). Supports `~`, `$VAR`, `${VAR}`, and `%VAR%` (Windows).
-
-**Environment**
-- **Custom variables**: Environment variables for Claude SDK (KEY=VALUE format, supports `export ` prefix)
-- **Environment snippets**: Save and restore environment variable configurations
-
-**Advanced**
-- **Claude CLI path**: Custom path to Claude Code CLI (leave empty for auto-detection)
-
-## Safety and Permissions
-
-| Scope | Access |
-|-------|--------|
-| **Vault** | Full read/write (symlink-safe via `realpath`) |
-| **Export paths** | Write-only (e.g., `~/Desktop`, `~/Downloads`) |
-| **External contexts** | Full read/write (session-only, added via folder icon) |
-
-- **YOLO mode**: No approval prompts; all tool calls execute automatically (default)
-- **Safe mode**: Approval prompt per tool call; Bash requires exact match, file tools allow prefix match
-- **Plan mode**: Explores and designs a plan before implementing. Toggle via Shift+Tab in the chat input
-
-## Privacy & Data Use
-
-- **Sent to API**: Your input, attached files, images, and tool call outputs. Default: Anthropic; custom endpoint via `ANTHROPIC_BASE_URL`.
-- **Local storage**: Settings, session metadata, and commands stored in `vault/.claude/`; session messages in `~/.claude/projects/` (SDK-native); legacy sessions in `vault/.claude/sessions/`.
-- **No telemetry**: No tracking beyond your configured API provider.
-
-## Troubleshooting
-
-### Claude CLI not found
-
-If you encounter `spawn claude ENOENT` or `Claude CLI not found`, the plugin can't auto-detect your Claude installation. Common with Node version managers (nvm, fnm, volta).
-
-**Solution**: Find your CLI path and set it in Settings → Advanced → Claude CLI path.
-
-| Platform | Command | Example Path |
-|----------|---------|--------------|
-| macOS/Linux | `which claude` | `/Users/you/.volta/bin/claude` |
-| Windows (native) | `where.exe claude` | `C:\Users\you\AppData\Local\Claude\claude.exe` |
-| Windows (npm) | `npm root -g` | `{root}\@anthropic-ai\claude-code\cli.js` |
-
-> **Note**: On Windows, avoid `.cmd` wrappers. Use `claude.exe` or `cli.js`.
-
-**Alternative**: Add your Node.js bin directory to PATH in Settings → Environment → Custom variables.
-
-### npm CLI and Node.js not in same directory
-
-If using npm-installed CLI, check if `claude` and `node` are in the same directory:
-```bash
-dirname $(which claude)
-dirname $(which node)
-```
-
-If different, GUI apps like Obsidian may not find Node.js.
-
-**Solutions**:
-1. Install native binary (recommended)
-2. Add Node.js path to Settings → Environment: `PATH=/path/to/node/bin`
-
-**Still having issues?** [Open a GitHub issue](https://github.com/laoshi1991/NewClaudian/issues) with your platform, CLI path, and error message.
-
-## Architecture
-
-```
-src/
-├── main.ts                      # Plugin entry point
-├── core/                        # Core infrastructure
-│   ├── agent/                   # Claude Agent SDK wrapper (NewClaudianService)
-│   ├── agents/                  # Custom agent management (AgentManager)
-│   ├── commands/                # Slash command management (SlashCommandManager)
-│   ├── hooks/                   # PreToolUse/PostToolUse hooks
-│   ├── images/                  # Image caching and loading
-│   ├── mcp/                     # MCP server config, service, and testing
-│   ├── plugins/                 # Claude Code plugin discovery and management
-│   ├── prompts/                 # System prompts for agents
-│   ├── sdk/                     # SDK message transformation
-│   ├── security/                # Approval, blocklist, path validation
-│   ├── storage/                 # Distributed storage system
-│   ├── tools/                   # Tool constants and utilities
-│   └── types/                   # Type definitions
-├── features/                    # Feature modules
-│   ├── chat/                    # Main chat view + UI, rendering, controllers, tabs
-│   ├── inline-edit/             # Inline edit service + UI
-│   └── settings/                # Settings tab UI
-├── shared/                      # Shared UI components and modals
-│   ├── components/              # Input toolbar bits, dropdowns, selection highlight
-│   ├── mention/                 # @-mention dropdown controller
-│   ├── modals/                  # Instruction modal
-│   └── icons.ts                 # Shared SVG icons
-├── i18n/                        # Internationalization (10 locales)
-├── utils/                       # Modular utility functions
-└── style/                       # Modular CSS (→ styles.css)
-```
-
-## Roadmap
-
-- [x] Claude Code Plugin support
-- [x] Custom agent (subagent) support
-- [x] Claude in Chrome support
-- [x] `/compact` command
-- [x] Plan mode
-- [x] `rewind` and `fork` support (including `/fork` command)
-- [x] `!command` support
-- [x] Tool renderers refinement
-- [x] 1M Opus and Sonnet models
-- [ ] Codex SDK integration
-- [ ] Hooks and other advanced features
-- [ ] More to come!
-
-## License
-
-Licensed under the [MIT License](LICENSE).
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=laoshi1991%2FNewClaudian&type=date&legend=top-left">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=laoshi1991/NewClaudian&type=date&legend=top-left&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=laoshi1991/NewClaudian&type=date&legend=top-left" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=laoshi1991/NewClaudian&type=date&legend=top-left" />
-  </picture>
-</a>
-
-## Acknowledgments
-
-- [Obsidian](https://obsidian.md) for the plugin API
-- [Anthropic](https://anthropic.com) for Claude and the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview)
-
+- 感谢 [Obsidian](https://obsidian.md) 提供的插件 API。
+- 感谢 [Anthropic](https://anthropic.com) 提供的 Claude 模型以及 [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview)。
 ## 文件图标规则
 
 我们在聊天框拖拽上传组件中实现了一套完整的文件类型差异化图标显示方案，支持超过 15 种常见类型的文件。

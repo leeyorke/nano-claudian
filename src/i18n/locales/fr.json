@@ -136,7 +136,7 @@
     }
   },
   "settings": {
-    "title": "Paramètres NewClaudian",
+    "title": "Paramètres nano-claudian",
     "avatarSettings": {
       "title": "Paramètres d'avatar",
       "userAvatar": "Avatar utilisateur",
@@ -147,7 +147,7 @@
     },
     "customization": "Personnalisation",
     "userName": {
-      "name": "Comment NewClaudian doit-il vous appeler ?",
+      "name": "Comment nano-claudian doit-il vous appeler ?",
       "desc": "Votre nom pour les salutations personnalisées (laisser vide pour les salutations génériques)"
     },
     "excludedTags": {
@@ -217,7 +217,7 @@
     },
     "hiddenSlashCommands": {
       "name": "Commandes masquées",
-      "desc": "Masquer des commandes slash spécifiques du menu déroulant. Utile pour masquer les commandes Claude Code qui ne sont pas pertinentes pour NewClaudian. Entrez les noms de commandes sans le slash initial, un par ligne.",
+      "desc": "Masquer des commandes slash spécifiques du menu déroulant. Utile pour masquer les commandes Claude Code qui ne sont pas pertinentes pour nano-claudian. Entrez les noms de commandes sans le slash initial, un par ligne.",
       "placeholder": "commit\nbuild\ntest"
     },
     "mcpServers": {

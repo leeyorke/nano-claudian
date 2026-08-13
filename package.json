@@ -1,6 +1,6 @@
 {
-  "name": "NewClaudian",
-  "version": "2.1.8",
+  "name": "nano-claudian",
+  "version": "2.1.12",
   "description": "Embeds Claude Code as an AI collaborator in your vault.",
   "main": "main.js",
   "scripts": {
@@ -23,7 +23,7 @@
     "productivity",
     "ide"
   ],
-  "author": "laoshi1991",
+  "author": "leeyorke",
   "license": "MIT",
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
