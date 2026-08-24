@@ -174,6 +174,29 @@ describe('ModelSelector', () => {
     expect(label?.textContent).toBe('claude-opus-4-6');
   });
 
+  it('should resolve the current alias to its env-mapped custom model', () => {
+    // settings.model keeps the alias ('opus'), but env remaps that tier
+    callbacks.getEnvironmentVariables.mockReturnValue(
+      'ANTHROPIC_DEFAULT_OPUS_MODEL=nvidia/nemotron-3-ultra:free'
+    );
+    callbacks.getSettings.mockReturnValue({
+      model: 'opus',
+      thinkingBudget: 'low',
+      permissionMode: 'normal',
+      enableOpus1M: false,
+      enableSonnet1M: false,
+    });
+    selector.updateDisplay();
+    selector.renderOptions();
+
+    const label = parentEl.querySelector('.claudian-model-label');
+    expect(label?.textContent).toBe('nvidia/nemotron-3-ultra:free');
+
+    const dropdown = parentEl.querySelector('.claudian-model-dropdown');
+    const selected = dropdown?.children.find((o: any) => o.hasClass('selected'));
+    expect(selected?.children[0]?.textContent).toBe('nvidia/nemotron-3-ultra:free');
+  });
+
   it('should show 1M variants instead of standard variants when enabled', () => {
     callbacks.getSettings.mockReturnValue({
       model: 'opus[1m]',

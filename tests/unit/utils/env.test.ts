@@ -1115,6 +1115,93 @@ describe('getModelsFromEnvironment', () => {
     expect(result).toHaveLength(1);
     expect(result[0].value).toBe('valid-model');
   });
+
+  it('recognizes arbitrary tier keys like ANTHROPIC_DEFAULT_FABLE_MODEL', () => {
+    const result = getModelsFromEnvironment({
+      ANTHROPIC_DEFAULT_FABLE_MODEL: 'nvidia/nemotron-3-ultra',
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].value).toBe('nvidia/nemotron-3-ultra');
+    expect(result[0].description).toContain('fable');
+  });
+
+  it('uses the companion _NAME variable as label when present', () => {
+    const result = getModelsFromEnvironment({
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: 'nvidia/nemotron-3.5-lightning:free',
+      ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME: 'Nemotron Lightning',
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].label).toBe('Nemotron Lightning');
+  });
+});
+
+describe('getEnvironmentModelForAlias', () => {
+  const { getEnvironmentModelForAlias } = env;
+
+  it('returns the mapped model for a known alias', () => {
+    expect(getEnvironmentModelForAlias({
+      ANTHROPIC_DEFAULT_OPUS_MODEL: 'nvidia/nemotron-3-ultra:free',
+    }, 'opus')).toBe('nvidia/nemotron-3-ultra:free');
+  });
+
+  it('returns undefined when the alias is not mapped', () => {
+    expect(getEnvironmentModelForAlias({}, 'opus')).toBeUndefined();
+  });
+
+  it('returns undefined for empty or non-tier aliases', () => {
+    expect(getEnvironmentModelForAlias({ ANTHROPIC_MODEL: 'x' }, '')).toBeUndefined();
+    expect(getEnvironmentModelForAlias({ ANTHROPIC_MODEL: 'x' }, 'model')).toBeUndefined();
+  });
+});
+
+describe('resolveSelectedModelValue', () => {
+  const { resolveSelectedModelValue } = env;
+
+  it('returns current model when it is in the list and not remapped', () => {
+    expect(resolveSelectedModelValue(['haiku', 'sonnet', 'opus'], 'sonnet')).toBe('sonnet');
+  });
+
+  it('prefers the env-mapped model over a direct alias match', () => {
+    expect(resolveSelectedModelValue(
+      ['nvidia/nemotron-3-ultra:free', 'haiku', 'sonnet', 'opus'],
+      'opus',
+      { ANTHROPIC_DEFAULT_OPUS_MODEL: 'nvidia/nemotron-3-ultra:free' }
+    )).toBe('nvidia/nemotron-3-ultra:free');
+  });
+
+  it('returns current model when mapped value is not in the list', () => {
+    expect(resolveSelectedModelValue(
+      ['sonnet'],
+      'opus',
+      { ANTHROPIC_DEFAULT_OPUS_MODEL: 'nvidia/nemotron-3-ultra:free' }
+    )).toBe('opus');
+  });
+});
+
+describe('collectModelEnvironmentVariables', () => {
+  const { collectModelEnvironmentVariables } = env;
+
+  it('merges records with later sources overriding earlier ones', () => {
+    const merged = collectModelEnvironmentVariables([
+      { ANTHROPIC_BASE_URL: 'https://user.example.com', CUSTOM_A: '1' },
+      { ANTHROPIC_BASE_URL: 'https://vault.example.com' },
+    ]);
+    const parsed = parseEnvironmentVariables(merged);
+    expect(parsed.ANTHROPIC_BASE_URL).toBe('https://vault.example.com');
+    expect(parsed.CUSTOM_A).toBe('1');
+  });
+
+  it('returns empty string when no sources provided', () => {
+    expect(collectModelEnvironmentVariables([])).toBe('');
+    expect(collectModelEnvironmentVariables([{}])).toBe('');
+  });
+
+  it('keeps values containing special characters intact', () => {
+    const merged = collectModelEnvironmentVariables([
+      { TOKEN: 'sk-abc=123:x' },
+    ]);
+    expect(parseEnvironmentVariables(merged).TOKEN).toBe('sk-abc=123:x');
+  });
 });
 
 describe('getCurrentModelFromEnvironment', () => {

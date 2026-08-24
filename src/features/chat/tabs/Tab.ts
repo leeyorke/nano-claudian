@@ -491,7 +491,7 @@ function initializeInputToolbar(
       enableOpus1M: plugin.settings.enableOpus1M,
       enableSonnet1M: plugin.settings.enableSonnet1M,
     }),
-    getEnvironmentVariables: () => plugin.getActiveEnvironmentVariables(),
+    getEnvironmentVariables: () => plugin.getModelEnvironmentVariables(),
     getSdkModels: options.getSdkModels,
     onInsertCommand: (command: string) => {
       const inputEl = dom.inputEl;
@@ -704,7 +704,7 @@ export function initializeTabUI(
       },
       onHide: () => {},
       getSettings: () => plugin.settings,
-      getEnvironmentVariables: () => plugin.getActiveEnvironmentVariables(),
+      getEnvironmentVariables: () => plugin.getModelEnvironmentVariables(),
       getSdkModels: options.getSdkModels,
     }
   );

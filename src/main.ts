@@ -41,7 +41,7 @@ import { ClaudianSettingTab } from './features/settings/ClaudianSettings';
 import { setLocale } from './i18n';
 import { ClaudeCliResolver } from './utils/claudeCli';
 import { buildCursorContext } from './utils/editor';
-import { getCurrentModelFromEnvironment, getModelsFromEnvironment, parseEnvironmentVariables } from './utils/env';
+import { collectModelEnvironmentVariables, getCurrentModelFromEnvironment, getModelsFromEnvironment, getUserClaudeSettingsEnv, parseEnvironmentVariables } from './utils/env';
 import { getVaultPath } from './utils/path';
 import {
   deleteSDKSession,
@@ -195,6 +195,7 @@ export default class ClaudianPlugin extends Plugin {
   cliResolver: ClaudeCliResolver;
   private conversations: Conversation[] = [];
   private runtimeEnvironmentVariables = '';
+  private ccFileEnvironmentVariables = '';
 
   async onload() {
     await this.loadSettings();
@@ -491,6 +492,7 @@ export default class ClaudianPlugin extends Plugin {
     const backfilledConversations = this.backfillConversationResponseTimestamps();
 
     this.runtimeEnvironmentVariables = this.settings.environmentVariables || '';
+    await this.refreshCCFileEnvironmentVariables();
     const { changed, invalidatedConversations } = this.reconcileModelWithEnvironment(this.runtimeEnvironmentVariables);
 
     if (changed || didMigrateCliPath || didNormalizeModelVariants) {
@@ -584,6 +586,7 @@ export default class ClaudianPlugin extends Plugin {
 
     // Update runtime env vars so new processes use them
     this.runtimeEnvironmentVariables = envText;
+    await this.refreshCCFileEnvironmentVariables();
 
     const { changed, invalidatedConversations } = this.reconcileModelWithEnvironment(envText);
     await this.saveSettings();
@@ -650,6 +653,31 @@ export default class ClaudianPlugin extends Plugin {
   /** Returns the runtime environment variables (fixed at plugin load). */
   getActiveEnvironmentVariables(): string {
     return this.runtimeEnvironmentVariables;
+  }
+
+  /**
+   * Environment variables for building the model list: Claudian's own env text
+   * plus the env blocks of vault and user CC settings files (~/.claude/settings.json).
+   * The CLI applies those files itself, so its alias remappings must show in the UI.
+   */
+  getModelEnvironmentVariables(): string {
+    return collectModelEnvironmentVariables([
+      parseEnvironmentVariables(this.ccFileEnvironmentVariables),
+      parseEnvironmentVariables(this.runtimeEnvironmentVariables),
+    ]);
+  }
+
+  private async refreshCCFileEnvironmentVariables(): Promise<void> {
+    let vaultEnv: Record<string, string> = {};
+    try {
+      vaultEnv = (await this.storage.ccSettings.load()).env ?? {};
+    } catch {
+      vaultEnv = {};
+    }
+    this.ccFileEnvironmentVariables = collectModelEnvironmentVariables([
+      getUserClaudeSettingsEnv(),
+      vaultEnv,
+    ]);
   }
 
   getResolvedClaudeCliPath(): string | null {

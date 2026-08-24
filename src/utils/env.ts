@@ -338,17 +338,15 @@ export function getEnhancedPath(additionalPaths?: string, cliPath?: string): str
   return unique.join(PATH_SEPARATOR);
 }
 
-const CUSTOM_MODEL_ENV_KEYS = [
-  'ANTHROPIC_MODEL',
-  'ANTHROPIC_DEFAULT_OPUS_MODEL',
-  'ANTHROPIC_DEFAULT_SONNET_MODEL',
-  'ANTHROPIC_DEFAULT_HAIKU_MODEL',
-] as const;
+const ANTHROPIC_MODEL_KEY = 'ANTHROPIC_MODEL';
+// Any tier works (opus/sonnet/haiku/fable/...) - Claude Code resolves the alias
+const DEFAULT_TIER_MODEL_KEY_RE = /^ANTHROPIC_DEFAULT_([A-Z0-9]+)_MODEL$/;
 
-function getModelTypeFromEnvKey(envKey: string): string {
-  if (envKey === 'ANTHROPIC_MODEL') return 'model';
-  const match = envKey.match(/ANTHROPIC_DEFAULT_(\w+)_MODEL/);
-  return match ? match[1].toLowerCase() : envKey;
+/** Type of the model slot an env key configures: 'model' or a tier like 'opus'/'fable'. Null when not a model key. */
+function getModelTypeFromEnvKey(envKey: string): string | null {
+  if (envKey === ANTHROPIC_MODEL_KEY) return 'model';
+  const match = envKey.match(DEFAULT_TIER_MODEL_KEY_RE);
+  return match ? match[1].toLowerCase() : null;
 }
 
 /** Parses KEY=VALUE environment variables from text. Supports comments (#) and empty lines. */
@@ -376,22 +374,27 @@ export function parseEnvironmentVariables(input: string): Record<string, string>
   return result;
 }
 
+function deriveModelLabel(modelValue: string): string {
+  if (modelValue.includes('/')) {
+    return modelValue.split('/').pop() || modelValue;
+  }
+  return modelValue.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
 export function getModelsFromEnvironment(envVars: Record<string, string>): { value: string; label: string; description: string }[] {
   const modelMap = new Map<string, { types: string[]; label: string }>();
 
-  for (const envKey of CUSTOM_MODEL_ENV_KEYS) {
+  for (const [envKey, modelValue] of Object.entries(envVars)) {
     const type = getModelTypeFromEnvKey(envKey);
-    const modelValue = envVars[envKey];
-    if (modelValue) {
-      const label = modelValue.includes('/')
-        ? modelValue.split('/').pop() || modelValue
-        : modelValue.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    if (!type || !modelValue) continue;
+    // Explicit <KEY>_NAME companion variable wins as the display label
+    const nameOverride = envVars[`${envKey}_NAME`];
+    const label = nameOverride || deriveModelLabel(modelValue);
 
-      if (!modelMap.has(modelValue)) {
-        modelMap.set(modelValue, { types: [type], label });
-      } else {
-        modelMap.get(modelValue)!.types.push(type);
-      }
+    if (!modelMap.has(modelValue)) {
+      modelMap.set(modelValue, { types: [type], label });
+    } else {
+      modelMap.get(modelValue)!.types.push(type);
     }
   }
 
@@ -433,7 +436,70 @@ export function getCurrentModelFromEnvironment(envVars: Record<string, string>):
   if (envVars.ANTHROPIC_DEFAULT_OPUS_MODEL) {
     return envVars.ANTHROPIC_DEFAULT_OPUS_MODEL;
   }
+  for (const [key, value] of Object.entries(envVars)) {
+    const type = getModelTypeFromEnvKey(key);
+    if (type && type !== 'model' && value) {
+      return value;
+    }
+  }
   return null;
+}
+
+/** Resolves the custom model id an alias tier is remapped to via ANTHROPIC_DEFAULT_<TIER>_MODEL. */
+export function getEnvironmentModelForAlias(envVars: Record<string, string>, alias: string): string | undefined {
+  if (!alias) return undefined;
+  const normalized = alias.trim().toLowerCase();
+  if (!/^[a-z0-9]+$/.test(normalized)) return undefined;
+  return envVars[`ANTHROPIC_DEFAULT_${normalized.toUpperCase()}_MODEL`];
+}
+
+/** Merges env records into KEY=VALUE text; later sources override earlier ones for the same key. */
+export function collectModelEnvironmentVariables(sources: Record<string, string>[]): string {
+  const merged: Record<string, string> = {};
+  for (const source of sources) {
+    if (!source) continue;
+    for (const [key, value] of Object.entries(source)) {
+      if (typeof value === 'string' && value !== '') {
+        merged[key] = value;
+      }
+    }
+  }
+  return Object.entries(merged).map(([key, value]) => `${key}=${value}`).join('\n');
+}
+
+/**
+ * Effective model value to highlight: the alias's env-mapped custom model wins
+ * (settings.model keeps the alias when tiers are remapped, and at runtime that
+ * alias IS the mapped model), otherwise a direct list match.
+ */
+export function resolveSelectedModelValue(
+  availableValues: string[],
+  currentModel: string,
+  envVars?: Record<string, string>
+): string {
+  if (envVars) {
+    const mapped = getEnvironmentModelForAlias(envVars, currentModel);
+    if (mapped && availableValues.includes(mapped)) return mapped;
+  }
+  return currentModel;
+}
+
+/** Reads the env block from ~/.claude/settings.json (user-level CC settings). */
+export function getUserClaudeSettingsEnv(): Record<string, string> {
+  try {
+    const filePath = path.join(os.homedir(), '.claude', 'settings.json');
+    if (!fs.existsSync(filePath)) return {};
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as { env?: unknown };
+    const env = parsed?.env;
+    if (!env || typeof env !== 'object') return {};
+    const result: Record<string, string> = {};
+    for (const [key, value] of Object.entries(env as Record<string, unknown>)) {
+      if (typeof value === 'string') result[key] = value;
+    }
+    return result;
+  } catch {
+    return {};
+  }
 }
 
 /** Hostname changes will require reconfiguration. */
@@ -446,9 +512,8 @@ export const MAX_CONTEXT_LIMIT = 10_000_000;
 
 export function getCustomModelIds(envVars: Record<string, string>): Set<string> {
   const modelIds = new Set<string>();
-  for (const envKey of CUSTOM_MODEL_ENV_KEYS) {
-    const modelId = envVars[envKey];
-    if (modelId) {
+  for (const [envKey, modelId] of Object.entries(envVars)) {
+    if (getModelTypeFromEnvKey(envKey) && modelId) {
       modelIds.add(modelId);
     }
   }

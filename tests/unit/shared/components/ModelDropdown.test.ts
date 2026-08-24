@@ -79,4 +79,20 @@ describe('ModelDropdown', () => {
       .map((item: any) => item.querySelector('.claudian-slash-name')?.textContent);
     expect(names).toContain('my-proxy-model');
   });
+
+  it('should mark the env-mapped custom model as selected for the current alias', async () => {
+    // settings.model keeps the alias ('opus'), but env remaps that tier
+    const { containerEl, inputEl } = createDropdown(
+      'opus',
+      'ANTHROPIC_DEFAULT_OPUS_MODEL=nvidia/nemotron-3-ultra:free'
+    );
+
+    await typeCommand(inputEl, '/model');
+
+    const dropdownEl = containerEl.querySelector('.claudian-slash-dropdown');
+    const checkedItem = dropdownEl!.children.find(
+      (item: any) => item.querySelector('.claudian-slash-check')?.textContent === '✓'
+    );
+    expect(checkedItem?.querySelector('.claudian-slash-name')?.textContent).toBe('nvidia/nemotron-3-ultra:free');
+  });
 });

@@ -1,5 +1,5 @@
 import { DEFAULT_CLAUDE_MODELS, filterVisibleModelOptions, getModelFullName } from '../../core/types/models';
-import { getModelsFromEnvironment, parseEnvironmentVariables } from '../../utils/env';
+import { getModelsFromEnvironment, parseEnvironmentVariables, resolveSelectedModelValue } from '../../utils/env';
 
 export interface ModelDropdownCallbacks {
   onSelect: (modelValue: string) => void;
@@ -192,6 +192,7 @@ export class ModelDropdown {
     headerEl.setText('< /model');
 
     const currentModel = this.callbacks.getSettings().model;
+    const envVars = parseEnvironmentVariables(this.callbacks.getEnvironmentVariables());
 
     for (let i = 0; i < this.filteredModels.length; i++) {
       const model = this.filteredModels[i];
@@ -201,7 +202,11 @@ export class ModelDropdown {
         itemEl.addClass('selected');
       }
 
-      const isSelected = model.value === currentModel;
+      const isSelected = resolveSelectedModelValue(
+        this.filteredModels.map(m => m.value),
+        currentModel,
+        envVars
+      ) === model.value;
       
       const checkEl = itemEl.createSpan({ cls: 'claudian-slash-check', attr: { style: 'display: inline-block; width: 16px; font-weight: bold; color: var(--text-normal);' } });
       checkEl.setText(isSelected ? '✓' : '');

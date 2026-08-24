@@ -20,7 +20,7 @@ import {
 } from '../../../core/types';
 import { t } from '../../../i18n';
 import { CHECK_ICON_SVG, MCP_ICON_SVG } from '../../../shared/icons';
-import { getModelsFromEnvironment, parseEnvironmentVariables } from '../../../utils/env';
+import { getModelsFromEnvironment, parseEnvironmentVariables, resolveSelectedModelValue } from '../../../utils/env';
 import { filterValidPaths, findConflictingPath, isDuplicatePath, isValidDirectoryPath, validateDirectoryPath } from '../../../utils/externalContext';
 import { expandHomePath, normalizePathForFilesystem } from '../../../utils/path';
 
@@ -118,13 +118,17 @@ export class ModelSelector {
     this.renderOptions();
   }
 
+  private getEnvVars(): Record<string, string> | undefined {
+    if (!this.callbacks.getEnvironmentVariables) return undefined;
+    return parseEnvironmentVariables(this.callbacks.getEnvironmentVariables());
+  }
+
   updateDisplay() {
     if (!this.buttonEl) return;
     const currentModel = this.callbacks.getSettings().model;
     const models = this.getAvailableModels();
-    const modelInfo = models.find(m => m.value === currentModel);
-
-    const displayModel = modelInfo || models[0];
+    const selectedValue = resolveSelectedModelValue(models.map(m => m.value), currentModel, this.getEnvVars());
+    const displayModel = models.find(m => m.value === selectedValue) || models[0];
 
     this.buttonEl.empty();
 
@@ -146,10 +150,11 @@ export class ModelSelector {
 
     const currentModel = this.callbacks.getSettings().model;
     const models = this.getAvailableModels();
+    const selectedValue = resolveSelectedModelValue(models.map(m => m.value), currentModel, this.getEnvVars());
 
     for (const model of [...models].reverse()) {
       const option = this.dropdownEl.createDiv({ cls: 'claudian-model-option' });
-      if (model.value === currentModel) {
+      if (model.value === selectedValue) {
         option.addClass('selected');
       }
 
