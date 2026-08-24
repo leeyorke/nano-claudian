@@ -1,4 +1,4 @@
-import { DEFAULT_CLAUDE_MODELS, filterVisibleModelOptions } from '../../core/types/models';
+import { DEFAULT_CLAUDE_MODELS, filterVisibleModelOptions, getModelFullName } from '../../core/types/models';
 import { getModelsFromEnvironment, parseEnvironmentVariables } from '../../utils/env';
 
 export interface ModelDropdownCallbacks {
@@ -162,10 +162,12 @@ export class ModelDropdown {
   private async showDropdown(searchText: string): Promise<void> {
     const allModels = await this.getAvailableModels();
     
-    this.filteredModels = allModels.filter(model => 
-      model.label.toLowerCase().includes(searchText) || 
-      model.value.toLowerCase().includes(searchText)
-    );
+    this.filteredModels = allModels.filter(model => {
+      const fullName = getModelFullName(model.value).toLowerCase();
+      return model.label.toLowerCase().includes(searchText) ||
+        model.value.toLowerCase().includes(searchText) ||
+        fullName.includes(searchText);
+    });
 
     if (this.filteredModels.length === 0) {
       this.hide();
@@ -205,7 +207,7 @@ export class ModelDropdown {
       checkEl.setText(isSelected ? '✓' : '');
 
       const nameEl = itemEl.createSpan({ cls: 'claudian-slash-name', attr: { style: 'font-weight: 500;' } });
-      nameEl.setText(model.label);
+      nameEl.setText(getModelFullName(model.value));
 
       if (model.description) {
         const hintEl = itemEl.createSpan({ cls: 'claudian-slash-hint' });

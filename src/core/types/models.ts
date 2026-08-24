@@ -5,13 +5,20 @@
 /** Model identifier (string to support custom models via environment variables). */
 export type ClaudeModel = string;
 
-export const DEFAULT_CLAUDE_MODELS: { value: ClaudeModel; label: string; description: string }[] = [
-  { value: 'haiku', label: 'Haiku', description: 'Fast and efficient' },
-  { value: 'sonnet', label: 'Sonnet', description: 'Balanced performance' },
-  { value: 'sonnet[1m]', label: 'Sonnet 1M', description: 'Balanced performance (1M context window)' },
-  { value: 'opus', label: 'Opus', description: 'Most capable' },
-  { value: 'opus[1m]', label: 'Opus 1M', description: 'Most capable (1M context window)' },
+// Aliases resolve server-side per environment; these mirror the alias generation of the
+// bundled Claude Agent SDK and must be refreshed when the SDK updates its aliases.
+export const DEFAULT_CLAUDE_MODELS: { value: ClaudeModel; label: string; fullName?: string; description: string }[] = [
+  { value: 'haiku', label: 'Haiku', fullName: 'claude-haiku-4-5', description: 'Fast and efficient' },
+  { value: 'sonnet', label: 'Sonnet', fullName: 'claude-sonnet-4-6', description: 'Balanced performance' },
+  { value: 'sonnet[1m]', label: 'Sonnet 1M', fullName: 'claude-sonnet-4-6[1m]', description: 'Balanced performance (1M context window)' },
+  { value: 'opus', label: 'Opus', fullName: 'claude-opus-4-6', description: 'Most capable' },
+  { value: 'opus[1m]', label: 'Opus 1M', fullName: 'claude-opus-4-6[1m]', description: 'Most capable (1M context window)' },
 ];
+
+/** Resolves a default alias to its full model id; custom model ids pass through unchanged. */
+export function getModelFullName(model: string): string {
+  return DEFAULT_CLAUDE_MODELS.find((m) => m.value === model)?.fullName ?? model;
+}
 
 export type ThinkingBudget = 'off' | 'low' | 'medium' | 'high' | 'xhigh';
 

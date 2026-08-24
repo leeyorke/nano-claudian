@@ -65,13 +65,18 @@ describe('ModelSelector', () => {
     expect(container).not.toBeNull();
   });
 
-  it('should display current model label', () => {
-    // Default model is 'sonnet' which maps to 'Sonnet'
+  it('should display current model full name', () => {
+    // Default model is 'sonnet' which resolves to the full model id
     const btn = parentEl.querySelector('.claudian-model-btn');
     expect(btn).not.toBeNull();
     const label = btn?.querySelector('.claudian-model-label');
     expect(label).not.toBeNull();
-    expect(label?.textContent).toBe('Sonnet');
+    expect(label?.textContent).toBe('claude-sonnet-4-6');
+  });
+
+  it('should show friendly label as button tooltip', () => {
+    const btn = parentEl.querySelector('.claudian-model-btn');
+    expect(btn?.getAttribute('title')).toContain('Sonnet');
   });
 
   it('should display first model when current model not found', () => {
@@ -84,33 +89,40 @@ describe('ModelSelector', () => {
     });
     selector.updateDisplay();
     const label = parentEl.querySelector('.claudian-model-label');
-    expect(label?.textContent).toBe('Haiku');
+    expect(label?.textContent).toBe('claude-haiku-4-5');
   });
 
-  it('should render model options in reverse order', () => {
+  it('should render model options in reverse order with full names', () => {
     const dropdown = parentEl.querySelector('.claudian-model-dropdown');
     expect(dropdown).not.toBeNull();
     // DEFAULT_CLAUDE_MODELS is [haiku, sonnet, opus] -> reversed is [opus, sonnet, haiku]
     const options = dropdown?.children || [];
     expect(options.length).toBe(3);
     // Text is in child span, check first child's textContent
-    expect(options[0]?.children[0]?.textContent).toBe('Opus');
-    expect(options[1]?.children[0]?.textContent).toBe('Sonnet');
-    expect(options[2]?.children[0]?.textContent).toBe('Haiku');
+    expect(options[0]?.children[0]?.textContent).toBe('claude-opus-4-6');
+    expect(options[1]?.children[0]?.textContent).toBe('claude-sonnet-4-6');
+    expect(options[2]?.children[0]?.textContent).toBe('claude-haiku-4-5');
   });
 
   it('should mark current model as selected', () => {
     const dropdown = parentEl.querySelector('.claudian-model-dropdown');
     const options = dropdown?.children || [];
     // Sonnet is current (index 1 in reversed order)
-    const sonnetOption = options.find((o: any) => o.children[0]?.textContent === 'Sonnet');
+    const sonnetOption = options.find((o: any) => o.children[0]?.textContent === 'claude-sonnet-4-6');
     expect(sonnetOption?.hasClass('selected')).toBe(true);
+  });
+
+  it('should keep option tooltip with friendly label and description', () => {
+    const dropdown = parentEl.querySelector('.claudian-model-dropdown');
+    const options = dropdown?.children || [];
+    const opusOption = options.find((o: any) => o.children[0]?.textContent === 'claude-opus-4-6');
+    expect(opusOption?.getAttribute('title')).toContain('Opus');
   });
 
   it('should call onModelChange when option clicked', async () => {
     const dropdown = parentEl.querySelector('.claudian-model-dropdown');
     const options = dropdown?.children || [];
-    const opusOption = options.find((o: any) => o.children[0]?.textContent === 'Opus');
+    const opusOption = options.find((o: any) => o.children[0]?.textContent === 'claude-opus-4-6');
 
     await opusOption?.dispatchEvent('click', { stopPropagation: () => {} });
     expect(callbacks.onModelChange).toHaveBeenCalledWith('opus');
@@ -138,9 +150,9 @@ describe('ModelSelector', () => {
     });
     selector.renderOptions();
     selector.updateDisplay();
-    // Custom models should be available in dropdown
+    // Custom model ids are already full names - shown as-is
     const label = parentEl.querySelector('.claudian-model-label');
-    expect(label?.textContent).toBeDefined();
+    expect(label?.textContent).toBe('us.anthropic.claude-sonnet-4-20250514-v1:0');
   });
 
   it('should not filter custom env models when 1M toggles are enabled', () => {
@@ -159,7 +171,7 @@ describe('ModelSelector', () => {
     selector.updateDisplay();
 
     const label = parentEl.querySelector('.claudian-model-label');
-    expect(label?.textContent).toBe('Opus');
+    expect(label?.textContent).toBe('claude-opus-4-6');
   });
 
   it('should show 1M variants instead of standard variants when enabled', () => {
@@ -176,11 +188,11 @@ describe('ModelSelector', () => {
 
     const dropdown = parentEl.querySelector('.claudian-model-dropdown');
     const options = dropdown?.children || [];
-    expect(options.find((o: any) => o.children[0]?.textContent === 'Opus 1M')).toBeDefined();
-    expect(options.find((o: any) => o.children[0]?.textContent === 'Sonnet 1M')).toBeDefined();
-    expect(options.find((o: any) => o.children[0]?.textContent === 'Opus')).toBeUndefined();
-    expect(options.find((o: any) => o.children[0]?.textContent === 'Sonnet')).toBeUndefined();
-    expect(parentEl.querySelector('.claudian-model-label')?.textContent).toBe('Opus 1M');
+    expect(options.find((o: any) => o.children[0]?.textContent === 'claude-opus-4-6[1m]')).toBeDefined();
+    expect(options.find((o: any) => o.children[0]?.textContent === 'claude-sonnet-4-6[1m]')).toBeDefined();
+    expect(options.find((o: any) => o.children[0]?.textContent === 'claude-opus-4-6')).toBeUndefined();
+    expect(options.find((o: any) => o.children[0]?.textContent === 'claude-sonnet-4-6')).toBeUndefined();
+    expect(parentEl.querySelector('.claudian-model-label')?.textContent).toBe('claude-opus-4-6[1m]');
   });
 });
 

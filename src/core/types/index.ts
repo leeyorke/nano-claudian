@@ -25,6 +25,7 @@ export {
   type EffortLevel,
   filterVisibleModelOptions,
   getContextWindowSize,
+  getModelFullName,
   isAdaptiveThinkingModel,
   normalizeVisibleModelVariant,
   THINKING_BUDGETS,

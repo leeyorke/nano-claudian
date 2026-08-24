@@ -14,6 +14,7 @@ import {
   DEFAULT_CLAUDE_MODELS,
   EFFORT_LEVELS,
   filterVisibleModelOptions,
+  getModelFullName,
   isAdaptiveThinkingModel,
   THINKING_BUDGETS
 } from '../../../core/types';
@@ -41,6 +42,11 @@ export interface ToolbarCallbacks {
   getEnvironmentVariables?: () => string;
   onInsertCommand?: (command: string) => void;
   getSdkModels?: () => Promise<{ value: string; label: string; description?: string }[]>;
+}
+
+/** Tooltip keeps the friendly name since the button shows the full model id. */
+function formatModelTooltip(label: string, description?: string): string {
+  return description ? `${label} — ${description}` : label;
 }
 
 export class SlashCommandButton {
@@ -123,7 +129,10 @@ export class ModelSelector {
     this.buttonEl.empty();
 
     const labelEl = this.buttonEl.createSpan({ cls: 'claudian-model-label' });
-    labelEl.setText(displayModel?.label || 'Unknown');
+    labelEl.setText(displayModel ? getModelFullName(displayModel.value) : 'Unknown');
+    if (displayModel) {
+      this.buttonEl.setAttribute('title', formatModelTooltip(displayModel.label, displayModel.description));
+    }
   }
 
   setReady(ready: boolean) {
@@ -144,10 +153,8 @@ export class ModelSelector {
         option.addClass('selected');
       }
 
-      option.createSpan({ text: model.label });
-      if (model.description) {
-        option.setAttribute('title', model.description);
-      }
+      option.createSpan({ text: getModelFullName(model.value) });
+      option.setAttribute('title', formatModelTooltip(model.label, model.description));
 
       option.addEventListener('click', async (e) => {
         e.stopPropagation();

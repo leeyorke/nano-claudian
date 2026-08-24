@@ -21,6 +21,11 @@
 
 .claudian-model-label {
   font-weight: 500;
+  /* Full model ids can be long (e.g. Bedrock ARNs) - truncate instead of pushing toolbar items */
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .claudian-model-chevron {
