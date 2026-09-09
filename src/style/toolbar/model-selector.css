@@ -58,9 +58,20 @@
   transition: opacity 0.15s ease, visibility 0.15s ease;
 }
 
-.claudian-model-selector:hover .claudian-model-dropdown {
+/* Model selector dropdown — hidden by default, shown via JS toggle */
+.claudian-model-selector .claudian-model-dropdown {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.claudian-model-selector.open .claudian-model-dropdown {
   opacity: 1;
   visibility: visible;
+}
+
+.claudian-model-btn.open {
+  color: var(--claudian-brand);
 }
 
 .claudian-model-option {
@@ -71,6 +82,19 @@
   border-radius: 3px;
   transition: background 0.1s ease, color 0.1s ease;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.claudian-model-name {
+  font-weight: 500;
+}
+
+.claudian-model-tier {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-style: italic;
 }
 
 .claudian-model-option:hover {

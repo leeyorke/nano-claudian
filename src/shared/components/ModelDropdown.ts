@@ -1,5 +1,5 @@
 import { DEFAULT_CLAUDE_MODELS, filterVisibleModelOptions, getModelFullName } from '../../core/types/models';
-import { getModelsFromEnvironment, parseEnvironmentVariables, resolveSelectedModelValue } from '../../utils/env';
+import { getModelOptionsFromEnvironment, parseEnvironmentVariables, resolveSelectedModelValue } from '../../utils/env';
 
 export interface ModelDropdownCallbacks {
   onSelect: (modelValue: string) => void;
@@ -130,27 +130,37 @@ export class ModelDropdown {
   }
 
   private async getAvailableModels(): Promise<{ value: string; label: string; description?: string }[]> {
-    const models: { value: string; label: string; description?: string }[] = [...DEFAULT_CLAUDE_MODELS];
+    const envVars = parseEnvironmentVariables(this.callbacks.getEnvironmentVariables());
+    const customModels = getModelOptionsFromEnvironment(envVars);
 
-    if (this.callbacks.getEnvironmentVariables) {
-      const envVarsStr = this.callbacks.getEnvironmentVariables();
-      const envVars = parseEnvironmentVariables(envVarsStr);
-      const customModels = getModelsFromEnvironment(envVars);
-      if (customModels.length > 0) {
-        models.unshift(...customModels);
-      }
-    }
+    if (customModels.length > 0) {
+      // Per-tier env models — include SDK models as additional options
+      const models = [...customModels];
 
-    if (this.callbacks.getSdkModels) {
-      const sdkModels = await this.callbacks.getSdkModels();
-      if (sdkModels.length > 0) {
-        // Remove duplicates and append SDK models
+      if (this.callbacks.getSdkModels) {
+        const sdkModels = await this.callbacks.getSdkModels();
         const existingValues = new Set(models.map(m => m.value));
         for (const sdkModel of sdkModels) {
           if (!existingValues.has(sdkModel.value)) {
-            models.push(sdkModel);
+            models.push({ value: sdkModel.value, label: sdkModel.label, description: sdkModel.description ?? '' });
             existingValues.add(sdkModel.value);
           }
+        }
+      }
+
+      // Don't filter per-tier entries by 1M settings — those are env-driven
+      return models;
+    }
+
+    const models = [...DEFAULT_CLAUDE_MODELS];
+
+    if (this.callbacks.getSdkModels) {
+      const sdkModels = await this.callbacks.getSdkModels();
+      const existingValues = new Set(models.map(m => m.value));
+      for (const sdkModel of sdkModels) {
+        if (!existingValues.has(sdkModel.value)) {
+          models.push({ value: sdkModel.value, label: sdkModel.label, description: sdkModel.description ?? '' });
+          existingValues.add(sdkModel.value);
         }
       }
     }

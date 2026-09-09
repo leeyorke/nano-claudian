@@ -120,7 +120,7 @@ export function createTab(options: TabCreateOptions): TabData {
       dropZoneCoordinator: null,
       fileContextManager: null,
       imageContextManager: null,
-      modelSelector: null,
+      modelCommandBtn: null,
       thinkingBudgetSelector: null,
       externalContextSelector: null,
       mcpServerSelector: null,
@@ -257,7 +257,7 @@ export async function initializeTabService(
     // Create per-tab ClaudianService
     service = new ClaudianService(plugin, mcpManager);
     unsubscribeReadyState = service.onReadyStateChange((ready) => {
-      tab.ui.modelSelector?.setReady(ready);
+      tab.ui.modelCommandBtn?.updateDisplay();
     });
     tab.dom.eventCleanups.push(() => unsubscribeReadyState?.());
 
@@ -493,30 +493,14 @@ function initializeInputToolbar(
     }),
     getEnvironmentVariables: () => plugin.getModelEnvironmentVariables(),
     getSdkModels: options.getSdkModels,
+    onHideModelDropdown: () => tab.ui.modelDropdown?.hide(),
     onInsertCommand: (command: string) => {
-      const inputEl = dom.inputEl;
-      
-      if (command === 'model' && tab.ui.modelDropdown?.isVisible()) {
-        const text = inputEl.value;
-        const cursorPos = inputEl.selectionStart || 0;
-        const textBeforeCursor = text.substring(0, cursorPos);
-        const afterCursor = text.substring(cursorPos);
-        
-        const slashIndex = textBeforeCursor.lastIndexOf('/model');
-        if (slashIndex !== -1) {
-          const beforeSlash = textBeforeCursor.substring(0, slashIndex);
-          inputEl.value = beforeSlash + afterCursor;
-          inputEl.selectionStart = beforeSlash.length;
-          inputEl.selectionEnd = beforeSlash.length;
-        }
-        tab.ui.modelDropdown.hide();
-        inputEl.focus();
-        // trigger input event so UI updates correctly
-        inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-        return;
-      }
+      // Model selection is handled by ModelCommandButton directly
+      if (command === 'model') return;
 
-      if (command === '' && tab.ui.slashCommandDropdown?.isVisible()) {
+      const inputEl = dom.inputEl;
+
+      if (command === '' && tab.ui.modelDropdown?.isVisible()) {
         const text = inputEl.value;
         const cursorPos = inputEl.selectionStart || 0;
         const textBeforeCursor = text.substring(0, cursorPos);
@@ -529,7 +513,7 @@ function initializeInputToolbar(
           inputEl.selectionStart = beforeSlash.length;
           inputEl.selectionEnd = beforeSlash.length;
         }
-        tab.ui.slashCommandDropdown.hide();
+        tab.ui.slashCommandDropdown?.hide();
         inputEl.focus();
         inputEl.dispatchEvent(new Event('input', { bubbles: true }));
         return;
@@ -565,8 +549,7 @@ function initializeInputToolbar(
       }
       await plugin.saveSettings();
       tab.ui.thinkingBudgetSelector?.updateDisplay();
-      tab.ui.modelSelector?.updateDisplay();
-      tab.ui.modelSelector?.renderOptions();
+      tab.ui.modelCommandBtn?.updateDisplay();
 
       // Recalculate context usage percentage for the new model's context window
       const currentUsage = tab.state.usage;
@@ -596,7 +579,7 @@ function initializeInputToolbar(
     },
   });
 
-  tab.ui.modelSelector = toolbarComponents.modelSelector;
+  tab.ui.modelCommandBtn = toolbarComponents.modelCommandBtn;
   tab.ui.thinkingBudgetSelector = toolbarComponents.thinkingBudgetSelector;
   tab.ui.contextUsageMeter = toolbarComponents.contextUsageMeter;
   tab.ui.externalContextSelector = toolbarComponents.externalContextSelector;
@@ -686,8 +669,7 @@ export function initializeTabUI(
         }
         await plugin.saveSettings();
         tab.ui.thinkingBudgetSelector?.updateDisplay();
-        tab.ui.modelSelector?.updateDisplay();
-        tab.ui.modelSelector?.renderOptions();
+        tab.ui.modelCommandBtn?.updateDisplay();
 
         // Recalculate context usage percentage for the new model's context window
         const currentUsage = tab.state.usage;

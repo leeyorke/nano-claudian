@@ -93,8 +93,7 @@ export class ClaudianView extends ItemView {
         tab.state.usage = { ...tab.state.usage, model, contextWindow, percentage };
       }
 
-      tab.ui.modelSelector?.updateDisplay();
-      tab.ui.modelSelector?.renderOptions();
+      tab.ui.modelCommandBtn?.updateDisplay();
     }
   }
 

@@ -11,8 +11,10 @@ const {
   formatContextLimit,
   getCurrentModelFromEnvironment,
   getCustomModelIds,
+  getDefaultModelFromEnvironment,
   getEnhancedPath,
   getMissingNodeError,
+  getModelOptionsFromEnvironment,
   getModelsFromEnvironment,
   getHostnameKey,
   parseContextLimit,
@@ -385,7 +387,7 @@ describe('getEnhancedPath', () => {
         expect(result).not.toContain('v22.5.0');
       });
 
-      it('follows alias chains (lts/* â†’ lts/jod â†’ version)', () => {
+      it('follows alias chains (lts/* â†?lts/jod â†?version)', () => {
         const nvmDir = '/fake/home/.nvm';
         const versionBin = path.join(nvmDir, 'versions', 'node', 'v22.18.0', 'bin');
         mockNvm({
@@ -1125,13 +1127,118 @@ describe('getModelsFromEnvironment', () => {
     expect(result[0].description).toContain('fable');
   });
 
-  it('uses the companion _NAME variable as label when present', () => {
-    const result = getModelsFromEnvironment({
-      ANTHROPIC_DEFAULT_HAIKU_MODEL: 'nvidia/nemotron-3.5-lightning:free',
-      ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME: 'Nemotron Lightning',
+});
+describe('getModelOptionsFromEnvironment', () => {
+  it('returns empty array when no custom models configured', () => {
+    const result = getModelOptionsFromEnvironment({});
+    expect(result).toEqual([]);
+  });
+
+  it('returns a Default entry from ANTHROPIC_MODEL', () => {
+    const result = getModelOptionsFromEnvironment({
+      ANTHROPIC_MODEL: 'custom-model-v1',
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].value).toBe('custom-model-v1');
+    expect(result[0].description).toBe('Default model');
+  });
+
+  it('returns per-tier entries for ANTHROPIC_DEFAULT_*_MODEL vars', () => {
+    const result = getModelOptionsFromEnvironment({
+      ANTHROPIC_DEFAULT_OPUS_MODEL: 'my-opus',
+      ANTHROPIC_DEFAULT_SONNET_MODEL: 'my-sonnet',
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: 'my-haiku',
+    });
+    expect(result).toHaveLength(3);
+    expect(result.map(m => m.description)).toEqual([
+      'Custom Opus model',
+      'Custom Sonnet model',
+      'Custom Haiku model',
+    ]);
+  });
+
+  it('includes Default entry alongside per-tier entries', () => {
+    const result = getModelOptionsFromEnvironment({
+      ANTHROPIC_MODEL: 'default-model',
+      ANTHROPIC_DEFAULT_OPUS_MODEL: 'my-opus',
+      ANTHROPIC_DEFAULT_SONNET_MODEL: 'my-sonnet',
+    });
+    expect(result).toHaveLength(3);
+    expect(result[0].value).toBe('default-model');
+    expect(result[0].description).toBe('Default model');
+    expect(result.map(m => m.description)).toContain('Custom Opus model');
+    expect(result.map(m => m.description)).toContain('Custom Sonnet model');
+  });
+
+  it('does NOT deduplicate by model value when all tiers map to same ID', () => {
+    const result = getModelOptionsFromEnvironment({
+      ANTHROPIC_MODEL: 'shared-model',
+      ANTHROPIC_DEFAULT_OPUS_MODEL: 'shared-model',
+      ANTHROPIC_DEFAULT_SONNET_MODEL: 'shared-model',
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: 'shared-model',
+    });
+    expect(result).toHaveLength(4);
+    expect(result.every(m => m.value === 'shared-model')).toBe(true);
+  });
+
+  it('uses FABLE tier name for ANTHROPIC_DEFAULT_FABLE_MODEL', () => {
+    const result = getModelOptionsFromEnvironment({
+      ANTHROPIC_DEFAULT_FABLE_MODEL: 'nvidia/nemotron-3-ultra:free',
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].description).toBe('Custom Fable model');
+  });
+
+  it('formats label from model value', () => {
+    const result = getModelOptionsFromEnvironment({
+      ANTHROPIC_MODEL: 'claude-3-opus',
+    });
+    expect(result[0].label).toBe('Claude 3 Opus');
+  });
+
+  it('uses _NAME companion variable as label override', () => {
+    const result = getModelOptionsFromEnvironment({
+      ANTHROPIC_MODEL: 'nvidia/nemotron-3.5-lightning:free',
+      ANTHROPIC_MODEL_NAME: 'Nemotron Lightning',
     });
     expect(result).toHaveLength(1);
     expect(result[0].label).toBe('Nemotron Lightning');
+  });
+
+  it('ignores empty values', () => {
+    const result = getModelOptionsFromEnvironment({
+      ANTHROPIC_MODEL: '',
+      ANTHROPIC_DEFAULT_OPUS_MODEL: 'valid-model',
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].value).toBe('valid-model');
+  });
+});
+
+describe('getDefaultModelFromEnvironment', () => {
+  it('returns null when no env vars set', () => {
+    expect(getDefaultModelFromEnvironment({})).toBeNull();
+  });
+
+  it('returns ANTHROPIC_MODEL value', () => {
+    expect(getDefaultModelFromEnvironment({
+      ANTHROPIC_MODEL: 'default-model',
+    })).toBe('default-model');
+  });
+
+  it('falls back to first tier model when ANTHROPIC_MODEL is not set', () => {
+    const result = getDefaultModelFromEnvironment({
+      ANTHROPIC_DEFAULT_OPUS_MODEL: 'opus-model',
+      ANTHROPIC_DEFAULT_SONNET_MODEL: 'sonnet-model',
+    });
+    expect(result).toBe('opus-model');
+  });
+
+  it('returns null when all model vars are empty', () => {
+    expect(getDefaultModelFromEnvironment({
+      ANTHROPIC_MODEL: '',
+      ANTHROPIC_DEFAULT_OPUS_MODEL: '',
+    })).toBeNull();
   });
 });
 

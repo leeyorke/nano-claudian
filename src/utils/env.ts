@@ -445,6 +445,110 @@ export function getCurrentModelFromEnvironment(envVars: Record<string, string>):
   return null;
 }
 
+/** Per-tier model entry matching the Claude Code CLI /model format. */
+export interface EnvModelOption {
+  value: string;
+  label: string;
+  description: string;
+  /** The env key this entry was derived from (for identification). */
+  envKey?: string;
+}
+
+/** Tier display names (lowercase → display name). */
+const TIER_DISPLAY_NAMES: Record<string, string> = {
+  haiku: 'Haiku',
+  sonnet: 'Sonnet',
+  opus: 'Opus',
+  fable: 'Fable',
+};
+
+/**
+ * Returns per-tier model options from environment variables, matching the CLI /model format.
+ * No deduplication by model value — each tier gets its own entry even if they map to the same ID.
+ *
+ * Format:
+ *   - "Default" entry from ANTHROPIC_MODEL (description: "Default model")
+ *   - Per-tier entries from ANTHROPIC_DEFAULT_<TIER>_MODEL (description: "Custom {Tier} model")
+ *   - Any other ANTHROPIC_MODEL-style keys that aren't tier-specific (description: "Custom model")
+ */
+export function getModelOptionsFromEnvironment(envVars: Record<string, string>): EnvModelOption[] {
+  const options: EnvModelOption[] = [];
+  const seenKeys = new Set<string>();
+
+  // Default entry from ANTHROPIC_MODEL
+  if (envVars.ANTHROPIC_MODEL) {
+    const nameOverride = envVars.ANTHROPIC_MODEL_NAME;
+    options.push({
+      value: envVars.ANTHROPIC_MODEL,
+      label: nameOverride || deriveModelLabel(envVars.ANTHROPIC_MODEL),
+      description: 'Default model',
+      envKey: 'ANTHROPIC_MODEL',
+    });
+  }
+
+  // Per-tier entries — ordered by tier priority
+  const tierKeys: { key: string; tier: string }[] = [
+    { key: 'ANTHROPIC_DEFAULT_OPUS_MODEL', tier: 'opus' },
+    { key: 'ANTHROPIC_DEFAULT_FABLE_MODEL', tier: 'fable' },
+    { key: 'ANTHROPIC_DEFAULT_SONNET_MODEL', tier: 'sonnet' },
+    { key: 'ANTHROPIC_DEFAULT_HAIKU_MODEL', tier: 'haiku' },
+  ];
+
+  for (const { key, tier } of tierKeys) {
+    const modelValue = envVars[key];
+    if (modelValue) {
+      seenKeys.add(key);
+      const tierName = TIER_DISPLAY_NAMES[tier] || tier;
+      options.push({
+        value: modelValue,
+        label: deriveModelLabel(modelValue),
+        description: `Custom ${tierName} model`,
+        envKey: key,
+      });
+    }
+  }
+
+  // Any other model-specific env keys not yet captured
+  for (const [envKey, modelValue] of Object.entries(envVars)) {
+    if (!modelValue || seenKeys.has(envKey)) continue;
+    const type = getModelTypeFromEnvKey(envKey);
+    if (!type) continue;
+    // Skip if it's a duplicate of an existing entry
+    if (options.some(o => o.value === modelValue && o.envKey === envKey)) continue;
+    if (type === 'model' && envKey === 'ANTHROPIC_MODEL') continue; // Already handled
+    const label = deriveModelLabel(modelValue);
+    options.push({
+      value: modelValue,
+      label,
+      description: type === 'model' ? 'Custom model' : `Custom ${TIER_DISPLAY_NAMES[type] || type} model`,
+      envKey,
+    });
+  }
+
+  return options;
+}
+
+/**
+ * Returns the default model value from environment variables.
+ * Falls back to first available tier model if ANTHROPIC_MODEL is not set.
+ */
+export function getDefaultModelFromEnvironment(envVars: Record<string, string>): string | null {
+  if (envVars.ANTHROPIC_MODEL) return envVars.ANTHROPIC_MODEL;
+  const tierOrder = [
+    'ANTHROPIC_DEFAULT_OPUS_MODEL',
+    'ANTHROPIC_DEFAULT_FABLE_MODEL',
+    'ANTHROPIC_DEFAULT_SONNET_MODEL',
+    'ANTHROPIC_DEFAULT_HAIKU_MODEL',
+  ];
+  for (const key of tierOrder) {
+    if (envVars[key]) return envVars[key];
+  }
+  for (const [key, value] of Object.entries(envVars)) {
+    if (getModelTypeFromEnvKey(key) && value) return value;
+  }
+  return null;
+}
+
 /** Resolves the custom model id an alias tier is remapped to via ANTHROPIC_DEFAULT_<TIER>_MODEL. */
 export function getEnvironmentModelForAlias(envVars: Record<string, string>, alias: string): string | undefined {
   if (!alias) return undefined;

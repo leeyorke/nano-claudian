@@ -5,7 +5,7 @@ import {
   ContextUsageMeter,
   createInputToolbar,
   McpServerSelector,
-  ModelSelector,
+  ModelCommandButton,
   PermissionToggle,
   SlashCommandButton,
   ThinkingBudgetSelector,
@@ -48,16 +48,16 @@ function createMockCallbacks(overrides: Record<string, any> = {}) {
   };
 }
 
-describe('ModelSelector', () => {
+describe('ModelCommandButton', () => {
   let parentEl: any;
   let callbacks: ReturnType<typeof createMockCallbacks>;
-  let selector: ModelSelector;
+  let btn: ModelCommandButton;
 
   beforeEach(() => {
     jest.clearAllMocks();
     parentEl = createMockEl();
     callbacks = createMockCallbacks();
-    selector = new ModelSelector(parentEl, callbacks);
+    btn = new ModelCommandButton(parentEl, callbacks);
   });
 
   it('should create a container with model-selector class', () => {
@@ -66,17 +66,12 @@ describe('ModelSelector', () => {
   });
 
   it('should display current model full name', () => {
-    // Default model is 'sonnet' which resolves to the full model id
-    const btn = parentEl.querySelector('.claudian-model-btn');
-    expect(btn).not.toBeNull();
-    const label = btn?.querySelector('.claudian-model-label');
-    expect(label).not.toBeNull();
+    const label = parentEl.querySelector('.claudian-model-label');
     expect(label?.textContent).toBe('claude-sonnet-4-6');
   });
 
   it('should show friendly label as button tooltip', () => {
-    const btn = parentEl.querySelector('.claudian-model-btn');
-    expect(btn?.getAttribute('title')).toContain('Sonnet');
+    expect(parentEl.querySelector('.claudian-model-btn')?.getAttribute('title')).toContain('Sonnet');
   });
 
   it('should display first model when current model not found', () => {
@@ -87,32 +82,52 @@ describe('ModelSelector', () => {
       enableOpus1M: false,
       enableSonnet1M: false,
     });
-    selector.updateDisplay();
+    btn.updateDisplay();
     const label = parentEl.querySelector('.claudian-model-label');
     expect(label?.textContent).toBe('claude-haiku-4-5');
   });
 
   it('should render model options in reverse order with full names', () => {
+    btn.showDropdown();
     const dropdown = parentEl.querySelector('.claudian-model-dropdown');
-    expect(dropdown).not.toBeNull();
-    // DEFAULT_CLAUDE_MODELS is [haiku, sonnet, opus] -> reversed is [opus, sonnet, haiku]
     const options = dropdown?.children || [];
     expect(options.length).toBe(3);
-    // Text is in child span, check first child's textContent
     expect(options[0]?.children[0]?.textContent).toBe('claude-opus-4-6');
     expect(options[1]?.children[0]?.textContent).toBe('claude-sonnet-4-6');
     expect(options[2]?.children[0]?.textContent).toBe('claude-haiku-4-5');
   });
 
-  it('should mark current model as selected', () => {
+  it('should show tier label alongside model name', () => {
+    callbacks.getEnvironmentVariables.mockReturnValue(
+      'ANTHROPIC_DEFAULT_OPUS_MODEL=my-opus\n' +
+      'ANTHROPIC_DEFAULT_FABLE_MODEL=my-fable'
+    );
+    callbacks.getSettings.mockReturnValue({
+      model: 'my-opus',
+      thinkingBudget: 'low',
+      permissionMode: 'normal',
+      enableOpus1M: false,
+      enableSonnet1M: false,
+    });
+    btn.updateDisplay();
+    btn.showDropdown();
     const dropdown = parentEl.querySelector('.claudian-model-dropdown');
     const options = dropdown?.children || [];
-    // Sonnet is current (index 1 in reversed order)
+    const tierSpans = options.map((o: any) => o.querySelector('.claudian-model-tier')?.textContent);
+    expect(tierSpans).toContain('Custom Opus model');
+    expect(tierSpans).toContain('Custom Fable model');
+  });
+
+  it('should mark current model as selected', () => {
+    btn.showDropdown();
+    const dropdown = parentEl.querySelector('.claudian-model-dropdown');
+    const options = dropdown?.children || [];
     const sonnetOption = options.find((o: any) => o.children[0]?.textContent === 'claude-sonnet-4-6');
     expect(sonnetOption?.hasClass('selected')).toBe(true);
   });
 
   it('should keep option tooltip with friendly label and description', () => {
+    btn.showDropdown();
     const dropdown = parentEl.querySelector('.claudian-model-dropdown');
     const options = dropdown?.children || [];
     const opusOption = options.find((o: any) => o.children[0]?.textContent === 'claude-opus-4-6');
@@ -120,6 +135,7 @@ describe('ModelSelector', () => {
   });
 
   it('should call onModelChange when option clicked', async () => {
+    btn.showDropdown();
     const dropdown = parentEl.querySelector('.claudian-model-dropdown');
     const options = dropdown?.children || [];
     const opusOption = options.find((o: any) => o.children[0]?.textContent === 'claude-opus-4-6');
@@ -128,36 +144,62 @@ describe('ModelSelector', () => {
     expect(callbacks.onModelChange).toHaveBeenCalledWith('opus');
   });
 
-  it('should update display when setReady is called', () => {
-    selector.setReady(true);
-    const btn = parentEl.querySelector('.claudian-model-btn');
-    expect(btn?.hasClass('ready')).toBe(true);
-
-    selector.setReady(false);
-    expect(btn?.hasClass('ready')).toBe(false);
+  it('should toggle dropdown on button click', () => {
+    expect(btn.isVisible()).toBe(false);
+    btn.showDropdown();
+    expect(btn.isVisible()).toBe(true);
+    btn.hideDropdown();
+    expect(btn.isVisible()).toBe(false);
   });
 
-  it('should use custom models from environment variables', () => {
+  it('should use per-tier custom models from environment variables', () => {
     callbacks.getEnvironmentVariables.mockReturnValue(
-      'CLAUDE_CODE_USE_BEDROCK=1\nANTHROPIC_MODEL=us.anthropic.claude-sonnet-4-20250514-v1:0'
+      'ANTHROPIC_MODEL=default-model\n' +
+      'ANTHROPIC_DEFAULT_OPUS_MODEL=my-opus\n' +
+      'ANTHROPIC_DEFAULT_SONNET_MODEL=my-sonnet\n' +
+      'ANTHROPIC_DEFAULT_HAIKU_MODEL=my-haiku'
     );
     callbacks.getSettings.mockReturnValue({
-      model: 'us.anthropic.claude-sonnet-4-20250514-v1:0',
+      model: 'default-model',
       thinkingBudget: 'low',
       permissionMode: 'normal',
       enableOpus1M: false,
       enableSonnet1M: false,
     });
-    selector.renderOptions();
-    selector.updateDisplay();
-    // Custom model ids are already full names - shown as-is
+    btn.updateDisplay();
+    btn.showDropdown();
     const label = parentEl.querySelector('.claudian-model-label');
-    expect(label?.textContent).toBe('us.anthropic.claude-sonnet-4-20250514-v1:0');
+    expect(label?.textContent).toBe('default-model');
+    const dropdown = parentEl.querySelector('.claudian-model-dropdown');
+    const options = dropdown?.children || [];
+    expect(options.length).toBe(4);
+  });
+
+  it('should not deduplicate when all env tiers map to same model value', () => {
+    callbacks.getEnvironmentVariables.mockReturnValue(
+      'ANTHROPIC_MODEL=shared-model\n' +
+      'ANTHROPIC_DEFAULT_OPUS_MODEL=shared-model\n' +
+      'ANTHROPIC_DEFAULT_SONNET_MODEL=shared-model\n' +
+      'ANTHROPIC_DEFAULT_HAIKU_MODEL=shared-model'
+    );
+    callbacks.getSettings.mockReturnValue({
+      model: 'shared-model',
+      thinkingBudget: 'low',
+      permissionMode: 'normal',
+      enableOpus1M: false,
+      enableSonnet1M: false,
+    });
+    btn.updateDisplay();
+    btn.showDropdown();
+    const dropdown = parentEl.querySelector('.claudian-model-dropdown');
+    const options = dropdown?.children || [];
+    expect(options.length).toBe(4);
   });
 
   it('should not filter custom env models when 1M toggles are enabled', () => {
     callbacks.getEnvironmentVariables.mockReturnValue(
-      'ANTHROPIC_MODEL=opus'
+      'ANTHROPIC_MODEL=opus\n' +
+      'ANTHROPIC_DEFAULT_OPUS_MODEL=custom-opus'
     );
     callbacks.getSettings.mockReturnValue({
       model: 'opus',
@@ -167,15 +209,16 @@ describe('ModelSelector', () => {
       enableSonnet1M: true,
     });
 
-    selector.renderOptions();
-    selector.updateDisplay();
-
-    const label = parentEl.querySelector('.claudian-model-label');
-    expect(label?.textContent).toBe('claude-opus-4-6');
+    btn.updateDisplay();
+    btn.showDropdown();
+    const dropdown = parentEl.querySelector('.claudian-model-dropdown');
+    const options = dropdown?.children || [];
+    // Per-tier entries should not be filtered by 1M settings
+    const customOpus = options.find((o: any) => o.children[0]?.textContent === 'custom-opus');
+    expect(customOpus).toBeDefined();
   });
 
   it('should resolve the current alias to its env-mapped custom model', () => {
-    // settings.model keeps the alias ('opus'), but env remaps that tier
     callbacks.getEnvironmentVariables.mockReturnValue(
       'ANTHROPIC_DEFAULT_OPUS_MODEL=nvidia/nemotron-3-ultra:free'
     );
@@ -186,8 +229,8 @@ describe('ModelSelector', () => {
       enableOpus1M: false,
       enableSonnet1M: false,
     });
-    selector.updateDisplay();
-    selector.renderOptions();
+    btn.updateDisplay();
+    btn.showDropdown();
 
     const label = parentEl.querySelector('.claudian-model-label');
     expect(label?.textContent).toBe('nvidia/nemotron-3-ultra:free');
@@ -206,8 +249,8 @@ describe('ModelSelector', () => {
       enableSonnet1M: true,
     });
 
-    selector.renderOptions();
-    selector.updateDisplay();
+    btn.updateDisplay();
+    btn.showDropdown();
 
     const dropdown = parentEl.querySelector('.claudian-model-dropdown');
     const options = dropdown?.children || [];
@@ -216,6 +259,19 @@ describe('ModelSelector', () => {
     expect(options.find((o: any) => o.children[0]?.textContent === 'claude-opus-4-6')).toBeUndefined();
     expect(options.find((o: any) => o.children[0]?.textContent === 'claude-sonnet-4-6')).toBeUndefined();
     expect(parentEl.querySelector('.claudian-model-label')?.textContent).toBe('claude-opus-4-6[1m]');
+  });
+
+  it('should add open class when dropdown is shown', () => {
+    btn.showDropdown();
+    expect(parentEl.querySelector('.claudian-model-selector')?.hasClass('open')).toBe(true);
+    expect(parentEl.querySelector('.claudian-model-btn')?.hasClass('open')).toBe(true);
+  });
+
+  it('should remove open class when dropdown is hidden', () => {
+    btn.showDropdown();
+    btn.hideDropdown();
+    expect(parentEl.querySelector('.claudian-model-selector')?.hasClass('open')).toBe(false);
+    expect(parentEl.querySelector('.claudian-model-btn')?.hasClass('open')).toBe(false);
   });
 });
 
@@ -773,12 +829,11 @@ describe('createInputToolbar', () => {
     const callbacks = createMockCallbacks();
     const toolbar = createInputToolbar(parentEl, callbacks);
 
-    expect(toolbar.modelSelector).toBeInstanceOf(ModelSelector);
+    expect(toolbar.modelCommandBtn).toBeInstanceOf(ModelCommandButton);
     expect(toolbar.thinkingBudgetSelector).toBeInstanceOf(ThinkingBudgetSelector);
     expect(toolbar.contextUsageMeter).toBeInstanceOf(ContextUsageMeter);
     expect(toolbar.mcpServerSelector).toBeInstanceOf(McpServerSelector);
     expect(toolbar.permissionToggle).toBeInstanceOf(PermissionToggle);
-    expect(toolbar.modelCommandBtn).toBeInstanceOf(SlashCommandButton);
     expect(toolbar.skillCommandBtn).toBeInstanceOf(SlashCommandButton);
   });
 });

@@ -26,7 +26,7 @@ import type {
   ImageContextManager,
   InstructionModeManager,
   McpServerSelector,
-  ModelSelector,
+  ModelCommandButton,
   PermissionToggle,
   StatusPanel,
   ThinkingBudgetSelector,
@@ -129,7 +129,7 @@ export interface TabUIComponents {
   dropZoneCoordinator: DropZoneCoordinator | null;
   fileContextManager: FileContextManager | null;
   imageContextManager: ImageContextManager | null;
-  modelSelector: ModelSelector | null;
+  modelCommandBtn: ModelCommandButton | null;
   thinkingBudgetSelector: ThinkingBudgetSelector | null;
   externalContextSelector: ExternalContextSelector | null;
   mcpServerSelector: McpServerSelector | null;

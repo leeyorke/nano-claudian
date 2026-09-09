@@ -20,7 +20,11 @@ import {
 } from '../../../core/types';
 import { t } from '../../../i18n';
 import { CHECK_ICON_SVG, MCP_ICON_SVG } from '../../../shared/icons';
-import { getModelsFromEnvironment, parseEnvironmentVariables, resolveSelectedModelValue } from '../../../utils/env';
+import {
+  getModelOptionsFromEnvironment,
+  parseEnvironmentVariables,
+  resolveSelectedModelValue,
+} from '../../../utils/env';
 import { filterValidPaths, findConflictingPath, isDuplicatePath, isValidDirectoryPath, validateDirectoryPath } from '../../../utils/externalContext';
 import { expandHomePath, normalizePathForFilesystem } from '../../../utils/path';
 
@@ -41,6 +45,7 @@ export interface ToolbarCallbacks {
   getSettings: () => ToolbarSettings;
   getEnvironmentVariables?: () => string;
   onInsertCommand?: (command: string) => void;
+  onHideModelDropdown?: () => void;
   getSdkModels?: () => Promise<{ value: string; label: string; description?: string }[]>;
 }
 
@@ -78,12 +83,12 @@ export class SlashCommandButton {
   }
 }
 
-export class ModelSelector {
+export class ModelCommandButton {
   private container: HTMLElement;
   private buttonEl: HTMLElement | null = null;
   private dropdownEl: HTMLElement | null = null;
   private callbacks: ToolbarCallbacks;
-  private isReady = false;
+  private isOpen = false;
 
   constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
     this.callbacks = callbacks;
@@ -92,30 +97,41 @@ export class ModelSelector {
   }
 
   private getAvailableModels() {
-    const models = [...DEFAULT_CLAUDE_MODELS];
-
-    if (this.callbacks.getEnvironmentVariables) {
-      const envVarsStr = this.callbacks.getEnvironmentVariables();
-      const envVars = parseEnvironmentVariables(envVarsStr);
-      const customModels = getModelsFromEnvironment(envVars);
+    const envVars = this.getEnvVars();
+    if (envVars) {
+      const customModels = getModelOptionsFromEnvironment(envVars);
       if (customModels.length > 0) {
         return customModels;
       }
     }
-
     const settings = this.callbacks.getSettings();
-    return filterVisibleModelOptions(models, settings.enableOpus1M, settings.enableSonnet1M);
+    return filterVisibleModelOptions(
+      DEFAULT_CLAUDE_MODELS.map(m => ({ value: m.value, label: m.label, description: m.description })),
+      settings.enableOpus1M,
+      settings.enableSonnet1M
+    );
   }
 
   private render() {
     this.container.empty();
 
-    this.buttonEl = this.container.createDiv({ cls: 'claudian-model-btn' });
-    this.setReady(this.isReady);
+    this.buttonEl = this.container.createDiv({ cls: 'claudian-model-btn ready' });
     this.updateDisplay();
 
     this.dropdownEl = this.container.createDiv({ cls: 'claudian-model-dropdown' });
     this.renderOptions();
+
+    this.buttonEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Hide the typing-based ModelDropdown if it's visible
+      this.callbacks.onHideModelDropdown?.();
+      this.toggleDropdown();
+    });
+
+    // Close dropdown when clicking outside
+    this.container.addEventListener('blur', () => {
+      this.hideDropdown();
+    }, true);
   }
 
   private getEnvVars(): Record<string, string> | undefined {
@@ -127,7 +143,11 @@ export class ModelSelector {
     if (!this.buttonEl) return;
     const currentModel = this.callbacks.getSettings().model;
     const models = this.getAvailableModels();
-    const selectedValue = resolveSelectedModelValue(models.map(m => m.value), currentModel, this.getEnvVars());
+    const selectedValue = resolveSelectedModelValue(
+      models.map(m => m.value),
+      currentModel,
+      this.getEnvVars()
+    );
     const displayModel = models.find(m => m.value === selectedValue) || models[0];
 
     this.buttonEl.empty();
@@ -137,11 +157,36 @@ export class ModelSelector {
     if (displayModel) {
       this.buttonEl.setAttribute('title', formatModelTooltip(displayModel.label, displayModel.description));
     }
+
+    // Refresh dropdown options if it's currently visible
+    if (this.isOpen) {
+      this.renderOptions();
+    }
   }
 
-  setReady(ready: boolean) {
-    this.isReady = ready;
-    this.buttonEl?.toggleClass('ready', ready);
+  isVisible(): boolean {
+    return this.isOpen;
+  }
+
+  toggleDropdown() {
+    if (this.isOpen) {
+      this.hideDropdown();
+    } else {
+      this.showDropdown();
+    }
+  }
+
+  showDropdown() {
+    this.isOpen = true;
+    this.renderOptions();
+    this.container.addClass('open');
+    this.buttonEl?.addClass('open');
+  }
+
+  hideDropdown() {
+    this.isOpen = false;
+    this.container.removeClass('open');
+    this.buttonEl?.removeClass('open');
   }
 
   renderOptions() {
@@ -150,7 +195,11 @@ export class ModelSelector {
 
     const currentModel = this.callbacks.getSettings().model;
     const models = this.getAvailableModels();
-    const selectedValue = resolveSelectedModelValue(models.map(m => m.value), currentModel, this.getEnvVars());
+    const selectedValue = resolveSelectedModelValue(
+      models.map(m => m.value),
+      currentModel,
+      this.getEnvVars()
+    );
 
     for (const model of [...models].reverse()) {
       const option = this.dropdownEl.createDiv({ cls: 'claudian-model-option' });
@@ -158,16 +207,28 @@ export class ModelSelector {
         option.addClass('selected');
       }
 
-      option.createSpan({ text: getModelFullName(model.value) });
+      const nameSpan = option.createSpan({ text: getModelFullName(model.value) });
+      nameSpan.addClass('claudian-model-name');
+
+      const tierLabel = model.description || '';
+      if (tierLabel) {
+        option.createSpan({ text: tierLabel }).addClass('claudian-model-tier');
+      }
+
       option.setAttribute('title', formatModelTooltip(model.label, model.description));
 
       option.addEventListener('click', async (e) => {
         e.stopPropagation();
         await this.callbacks.onModelChange(model.value);
         this.updateDisplay();
-        this.renderOptions();
+        this.hideDropdown();
       });
     }
+  }
+
+  destroy() {
+    this.hideDropdown();
+    this.container.empty();
   }
 }
 
@@ -984,22 +1045,20 @@ export function createInputToolbar(
   parentEl: HTMLElement,
   callbacks: ToolbarCallbacks
 ): {
-  modelSelector: ModelSelector;
+  modelCommandBtn: ModelCommandButton;
   thinkingBudgetSelector: ThinkingBudgetSelector;
   contextUsageMeter: ContextUsageMeter | null;
   externalContextSelector: ExternalContextSelector;
   mcpServerSelector: McpServerSelector;
   permissionToggle: PermissionToggle;
-  modelCommandBtn: SlashCommandButton;
   skillCommandBtn: SlashCommandButton;
 } {
-  const modelSelector = new ModelSelector(parentEl, callbacks);
+  const modelCommandBtn = new ModelCommandButton(parentEl, callbacks);
   const thinkingBudgetSelector = new ThinkingBudgetSelector(parentEl, callbacks);
   const contextUsageMeter = new ContextUsageMeter(parentEl);
-  const modelCommandBtn = new SlashCommandButton(parentEl, callbacks, '/model', 'model');
-  const skillCommandBtn = new SlashCommandButton(parentEl, callbacks, `✨ ${t('common.skills' as any)}`, ''); // Empty string to just type /
+  const skillCommandBtn = new SlashCommandButton(parentEl, callbacks, `✨ ${t('common.skills' as any)}`, '');
   const externalContextSelector = new ExternalContextSelector(parentEl, callbacks);
   const mcpServerSelector = new McpServerSelector(parentEl);
-  const permissionToggle = new PermissionToggle(parentEl, callbacks); // Moved to end
-  return { modelSelector, thinkingBudgetSelector, contextUsageMeter, externalContextSelector, mcpServerSelector, permissionToggle, modelCommandBtn, skillCommandBtn };
+  const permissionToggle = new PermissionToggle(parentEl, callbacks);
+  return { modelCommandBtn, thinkingBudgetSelector, contextUsageMeter, externalContextSelector, mcpServerSelector, permissionToggle, skillCommandBtn };
 }

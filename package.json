@@ -1,6 +1,6 @@
 {
   "name": "nano-claudian",
-  "version": "2.1.14",
+  "version": "2.2.0",
   "description": "Embeds Claude Code as an AI collaborator in your vault.",
   "main": "main.js",
   "scripts": {

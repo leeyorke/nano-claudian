@@ -93,10 +93,10 @@ const createMockStatusPanel = () => ({
   destroy: jest.fn(),
 });
 
-const createMockModelSelector = () => ({
+const createMockModelCommandBtn = () => ({
   updateDisplay: jest.fn(),
-  renderOptions: jest.fn(),
-  setReady: jest.fn(),
+  hideDropdown: jest.fn(),
+  isVisible: jest.fn().mockReturnValue(false),
 });
 
 const createMockClaudianService = (overrides?: {
@@ -142,7 +142,7 @@ let mockSlashCommandDropdown: ReturnType<typeof createMockSlashCommandDropdown>;
 let mockInstructionModeManager: ReturnType<typeof createMockInstructionModeManager>;
 let mockBangBashModeManager: ReturnType<typeof createMockBangBashModeManager>;
 let mockStatusPanel: ReturnType<typeof createMockStatusPanel>;
-let mockModelSelector: ReturnType<typeof createMockModelSelector>;
+let mockModelCommandBtn: ReturnType<typeof createMockModelCommandBtn>;
 let mockThinkingBudgetSelector: ReturnType<typeof createMockThinkingBudgetSelector>;
 let mockContextUsageMeter: ReturnType<typeof createMockContextUsageMeter>;
 let mockExternalContextSelector: ReturnType<typeof createMockExternalContextSelector>;
@@ -207,14 +207,14 @@ jest.mock('@/features/chat/ui', () => ({
     return mockStatusPanel;
   }),
   createInputToolbar: jest.fn().mockImplementation(() => {
-    mockModelSelector = createMockModelSelector();
+    mockModelCommandBtn = createMockModelCommandBtn();
     mockThinkingBudgetSelector = createMockThinkingBudgetSelector();
     mockContextUsageMeter = createMockContextUsageMeter();
     mockExternalContextSelector = createMockExternalContextSelector();
     mockMcpServerSelector = createMockMcpServerSelector();
     mockPermissionToggle = createMockPermissionToggle();
     return {
-      modelSelector: mockModelSelector,
+      modelCommandBtn: mockModelCommandBtn,
       thinkingBudgetSelector: mockThinkingBudgetSelector,
       contextUsageMeter: mockContextUsageMeter,
       externalContextSelector: mockExternalContextSelector,
@@ -528,14 +528,14 @@ describe('Tab - Service Initialization', () => {
 
       await initializeTabService(tab, options.plugin, options.mcpManager);
 
-      expect(mockModelSelector.setReady).toHaveBeenCalledWith(false);
+      expect(mockModelCommandBtn.updateDisplay).toHaveBeenCalled();
 
       const readyListener = mockOnReadyStateChange.mock.calls[0]?.[0] as (ready: boolean) => void;
       readyListener(true);
-      expect(mockModelSelector.setReady).toHaveBeenCalledWith(true);
+      expect(mockModelCommandBtn.updateDisplay).toHaveBeenCalled();
 
       readyListener(false);
-      expect(mockModelSelector.setReady).toHaveBeenCalledWith(false);
+      expect(mockModelCommandBtn.updateDisplay).toHaveBeenCalled();
     });
   });
 });
@@ -988,7 +988,7 @@ describe('Tab - UI Initialization', () => {
 
       initializeTabUI(tab, options.plugin);
 
-      expect(tab.ui.modelSelector).toBeDefined();
+      expect(tab.ui.modelCommandBtn).toBeDefined();
       expect(tab.ui.thinkingBudgetSelector).toBeDefined();
       expect(tab.ui.contextUsageMeter).toBeDefined();
       expect(tab.ui.externalContextSelector).toBeDefined();

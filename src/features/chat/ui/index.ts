@@ -7,7 +7,7 @@ export {
   createInputToolbar,
   ExternalContextSelector,
   McpServerSelector,
-  ModelSelector,
+  ModelCommandButton,
   PermissionToggle,
   SlashCommandButton,
   ThinkingBudgetSelector,
