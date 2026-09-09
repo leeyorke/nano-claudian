@@ -134,22 +134,8 @@ export class ModelDropdown {
     const customModels = getModelOptionsFromEnvironment(envVars);
 
     if (customModels.length > 0) {
-      // Per-tier env models — include SDK models as additional options
-      const models = [...customModels];
-
-      if (this.callbacks.getSdkModels) {
-        const sdkModels = await this.callbacks.getSdkModels();
-        const existingValues = new Set(models.map(m => m.value));
-        for (const sdkModel of sdkModels) {
-          if (!existingValues.has(sdkModel.value)) {
-            models.push({ value: sdkModel.value, label: sdkModel.label, description: sdkModel.description ?? '' });
-            existingValues.add(sdkModel.value);
-          }
-        }
-      }
-
-      // Don't filter per-tier entries by 1M settings — those are env-driven
-      return models;
+      // Per-tier env models — match CLI /model behavior (no SDK models appended)
+      return customModels;
     }
 
     const models = [...DEFAULT_CLAUDE_MODELS];

@@ -661,8 +661,10 @@ export default class ClaudianPlugin extends Plugin {
    * The CLI applies those files itself, so its alias remappings must show in the UI.
    */
   getModelEnvironmentVariables(): string {
+    // Re-read ~/.claude/settings.json each time so external edits are reflected immediately
+    const ccEnv = getUserClaudeSettingsEnv();
     return collectModelEnvironmentVariables([
-      parseEnvironmentVariables(this.ccFileEnvironmentVariables),
+      ccEnv,
       parseEnvironmentVariables(this.runtimeEnvironmentVariables),
     ]);
   }

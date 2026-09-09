@@ -196,6 +196,28 @@ describe('ModelCommandButton', () => {
     expect(options.length).toBe(4);
   });
 
+  it('should select only the option matching the current alias when tiers share same value', () => {
+    callbacks.getEnvironmentVariables.mockReturnValue(
+      'ANTHROPIC_DEFAULT_OPUS_MODEL=shared-model\n' +
+      'ANTHROPIC_DEFAULT_SONNET_MODEL=shared-model\n' +
+      'ANTHROPIC_DEFAULT_HAIKU_MODEL=shared-model'
+    );
+    callbacks.getSettings.mockReturnValue({
+      model: 'sonnet',  // alias → should select only the Sonnet tier entry
+      thinkingBudget: 'low',
+      permissionMode: 'normal',
+      enableOpus1M: false,
+      enableSonnet1M: false,
+    });
+    btn.updateDisplay();
+    btn.showDropdown();
+    const dropdown = parentEl.querySelector('.claudian-model-dropdown');
+    const options = dropdown?.children || [];
+    const selected = options.filter((o: any) => o.hasClass('selected'));
+    expect(selected.length).toBe(1);
+    expect(selected[0]?.children[0]?.textContent).toBe('shared-model');
+  });
+
   it('should not filter custom env models when 1M toggles are enabled', () => {
     callbacks.getEnvironmentVariables.mockReturnValue(
       'ANTHROPIC_MODEL=opus\n' +

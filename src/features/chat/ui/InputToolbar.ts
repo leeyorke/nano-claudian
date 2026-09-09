@@ -21,9 +21,9 @@ import {
 import { t } from '../../../i18n';
 import { CHECK_ICON_SVG, MCP_ICON_SVG } from '../../../shared/icons';
 import {
+  getEnvironmentModelForAlias,
   getModelOptionsFromEnvironment,
   parseEnvironmentVariables,
-  resolveSelectedModelValue,
 } from '../../../utils/env';
 import { filterValidPaths, findConflictingPath, isDuplicatePath, isValidDirectoryPath, validateDirectoryPath } from '../../../utils/externalContext';
 import { expandHomePath, normalizePathForFilesystem } from '../../../utils/path';
@@ -89,6 +89,7 @@ export class ModelCommandButton {
   private dropdownEl: HTMLElement | null = null;
   private callbacks: ToolbarCallbacks;
   private isOpen = false;
+  private selectedEnvKey: string | null = null;
 
   constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
     this.callbacks = callbacks;
@@ -96,7 +97,7 @@ export class ModelCommandButton {
     this.render();
   }
 
-  private getAvailableModels() {
+  private getAvailableModels(): { value: string; label: string; description?: string; envKey?: string }[] {
     const envVars = this.getEnvVars();
     if (envVars) {
       const customModels = getModelOptionsFromEnvironment(envVars);
@@ -143,11 +144,50 @@ export class ModelCommandButton {
     if (!this.buttonEl) return;
     const currentModel = this.callbacks.getSettings().model;
     const models = this.getAvailableModels();
-    const selectedValue = resolveSelectedModelValue(
-      models.map(m => m.value),
-      currentModel,
-      this.getEnvVars()
-    );
+    const envVars = this.getEnvVars();
+
+    // Resolve which envKey should be selected based on current model alias/value
+    this.selectedEnvKey = null;
+    if (currentModel) {
+      // Step 1: Check if currentModel matches an env value → find its envKey
+      for (const model of models) {
+        if (model.envKey) {
+          const envValue = envVars?.[model.envKey];
+          if (envValue && currentModel === envValue) {
+            this.selectedEnvKey = model.envKey;
+            break;
+          }
+        }
+      }
+
+      // Step 2: If currentModel is an alias (e.g. 'opus'), resolve it via env to find envKey
+      if (!this.selectedEnvKey && envVars) {
+        const resolvedValue = getEnvironmentModelForAlias(envVars, currentModel);
+        if (resolvedValue) {
+          for (const model of models) {
+            if (model.envKey && model.value === resolvedValue) {
+              this.selectedEnvKey = model.envKey;
+              break;
+            }
+          }
+        }
+      }
+
+      // Step 3: If no envKey matched, check if it matches any model's value directly
+      // (for models without envKey, like DEFAULT_CLAUDE_MODELS)
+      if (!this.selectedEnvKey) {
+        for (const model of models) {
+          if (currentModel === model.value) {
+            this.selectedEnvKey = model.envKey ?? null;
+            break;
+          }
+        }
+      }
+    }
+
+    const selectedValue = this.selectedEnvKey
+      ? models.find(m => m.envKey === this.selectedEnvKey)?.value ?? currentModel
+      : currentModel;
     const displayModel = models.find(m => m.value === selectedValue) || models[0];
 
     this.buttonEl.empty();
@@ -193,17 +233,14 @@ export class ModelCommandButton {
     if (!this.dropdownEl) return;
     this.dropdownEl.empty();
 
-    const currentModel = this.callbacks.getSettings().model;
     const models = this.getAvailableModels();
-    const selectedValue = resolveSelectedModelValue(
-      models.map(m => m.value),
-      currentModel,
-      this.getEnvVars()
-    );
 
     for (const model of [...models].reverse()) {
       const option = this.dropdownEl.createDiv({ cls: 'claudian-model-option' });
-      if (model.value === selectedValue) {
+      if (model.envKey && model.envKey === this.selectedEnvKey) {
+        option.addClass('selected');
+      } else if (!model.envKey && !this.selectedEnvKey && model.value === this.callbacks.getSettings().model) {
+        // Fallback: for models without envKey (e.g. DEFAULT_CLAUDE_MODELS), use value comparison
         option.addClass('selected');
       }
 
