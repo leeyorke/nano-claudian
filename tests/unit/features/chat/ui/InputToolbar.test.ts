@@ -7,6 +7,7 @@ import {
   McpServerSelector,
   ModelCommandButton,
   PermissionToggle,
+  SendButton,
   SlashCommandButton,
   ThinkingBudgetSelector,
 } from '@/features/chat/ui/InputToolbar';
@@ -857,5 +858,18 @@ describe('createInputToolbar', () => {
     expect(toolbar.mcpServerSelector).toBeInstanceOf(McpServerSelector);
     expect(toolbar.permissionToggle).toBeInstanceOf(PermissionToggle);
     expect(toolbar.skillCommandBtn).toBeInstanceOf(SlashCommandButton);
+    expect(toolbar.sendButton).toBeInstanceOf(SendButton);
+  });
+
+  it('should place send button after permission toggle in DOM', () => {
+    const parentEl = createMockEl();
+    const callbacks = createMockCallbacks();
+    createInputToolbar(parentEl, callbacks);
+
+    const classNames = parentEl.children.map((c: any) => c.className);
+    const permissionIdx = classNames.findIndex((c: string) => c.includes('claudian-permission-toggle'));
+    const sendIdx = classNames.findIndex((c: string) => c.includes('claudian-send-btn-container'));
+    expect(permissionIdx).toBeGreaterThanOrEqual(0);
+    expect(sendIdx).toBeGreaterThan(permissionIdx);
   });
 });

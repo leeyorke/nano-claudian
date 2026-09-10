@@ -12,6 +12,7 @@ import type { SubagentManager } from '../services/SubagentManager';
 import type { TitleGenerationService } from '../services/TitleGenerationService';
 import type { ChatState } from '../state/ChatState';
 import type { ExternalContextSelector, FileContextManager, ImageContextManager, McpServerSelector, StatusPanel } from '../ui';
+import type { InputController } from './InputController';
 
 export interface ConversationCallbacks {
   onNewConversation?: () => void;
@@ -37,6 +38,7 @@ export interface ConversationControllerDeps {
   getTitleGenerationService: () => TitleGenerationService | null;
   getStatusPanel: () => StatusPanel | null;
   getAgentService?: () => ClaudianService | null;
+  getInputController?: () => InputController | null;
 }
 
 type SaveOptions = {
@@ -416,6 +418,80 @@ export class ConversationController {
     }
 
     new Notice(t('chat.rewind.notice', { count: String(filesChanged) }));
+  }
+
+  /**
+   * Edits an already-sent user message and regenerates the response:
+   * rewinds the SDK session (when a previous assistant UUID exists), truncates
+   * local history at that message, then re-sends the edited text directly —
+   * unlike rewind(), the text is not parked in the input box.
+   */
+  async editAndResend(userMessageId: string, newContent: string): Promise<void> {
+    const { state, renderer } = this.deps;
+
+    if (state.isStreaming) {
+      new Notice(t('chat.rewind.unavailableStreaming'));
+      return;
+    }
+
+    const trimmed = newContent.trim();
+    if (!trimmed) return;
+
+    const msgs = state.messages;
+    const userIdx = msgs.findIndex(m => m.id === userMessageId);
+    if (userIdx === -1) {
+      new Notice(t('chat.rewind.failed', { error: 'Message not found' }));
+      return;
+    }
+    const userMsg = msgs[userIdx];
+    if (!userMsg.sdkUserUuid) {
+      new Notice(t('chat.rewind.unavailableNoUuid'));
+      return;
+    }
+
+    const rewindCtx = findRewindContext(msgs, userIdx);
+    const prevAssistantUuid = rewindCtx.prevAssistantUuid;
+
+    if (prevAssistantUuid) {
+      const agentService = this.getAgentService();
+      if (!agentService) {
+        new Notice(t('chat.rewind.failed', { error: 'Agent service not available' }));
+        return;
+      }
+      let result;
+      try {
+        result = await agentService.rewind(userMsg.sdkUserUuid, prevAssistantUuid);
+      } catch (e) {
+        new Notice(t('chat.rewind.failed', { error: e instanceof Error ? e.message : 'Unknown error' }));
+        return;
+      }
+      if (!result.canRewind) {
+        new Notice(t('chat.rewind.cannot', { error: result.error ?? 'Unknown error' }));
+        return;
+      }
+    }
+
+    state.truncateAt(userMessageId);
+
+    const welcomeEl = renderer.renderMessages(state.messages, () => this.getGreeting());
+    this.deps.setWelcomeEl(welcomeEl);
+    this.updateWelcomeVisibility();
+
+    try {
+      await this.save(false, { resumeSessionAt: prevAssistantUuid });
+    } catch (e) {
+      new Notice(t('chat.rewind.noticeSaveFailed', { count: '0', error: e instanceof Error ? e.message : 'Failed to save' }));
+    }
+
+    const inputController = this.deps.getInputController?.();
+    if (!inputController) {
+      // Fallback: put the edited text into the input box for manual resend
+      const inputEl = this.deps.getInputEl();
+      inputEl.value = trimmed;
+      inputEl.focus();
+      return;
+    }
+    await inputController.sendMessage({ content: trimmed });
   }
 
   /**

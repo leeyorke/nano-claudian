@@ -5,6 +5,8 @@
     "dropFileMessage": "将文件或文件夹拖放到此处以添加到您的消息中",
     "edit": "编辑",
     "delete": "删除",
+    "add": "添加",
+    "remove": "移除",
     "clear": "清除",
     "clearAll": "清除所有",
     "loading": "加载中",
@@ -15,7 +17,9 @@
     "settingsText": "设置",
     "advanced": "高级",
     "enabled": "已启用",
+    "enable": "启用",
     "disabled": "已禁用",
+    "disable": "停用",
     "platform": "平台",
     "refresh": "刷新",
     "rewind": "撤回",
@@ -54,6 +58,10 @@
     }
   },
   "chat": {
+    "toolbar": {
+      "send": "发送消息",
+      "stop": "停止生成"
+    },
     "rewind": {
       "confirmMessage": "回退到此处？此消息之后的文件更改将被还原。回退不会影响手动或通过 bash 编辑的文件。",
       "confirmButton": "回退",
@@ -102,6 +110,10 @@
     "renderer": {
       "copyMessage": "复制消息",
       "copied": "已复制！",
+      "editMessage": "编辑消息",
+      "editCancel": "取消",
+      "editSend": "重新发送",
+      "waiting": "等待回复...",
       "saved": "已保存！",
       "saveToNote": "保存为笔记",
       "saveSession": "保存会话",

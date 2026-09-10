@@ -53,9 +53,15 @@
         "preview": "Vista previa",
         "edit": "Editar"
       }
-    }
+    },
+    "enable": "Activar",
+    "disable": "Desactivar"
   },
   "chat": {
+    "toolbar": {
+      "send": "Enviar mensaje",
+      "stop": "Detener generación"
+    },
     "rewind": {
       "confirmMessage": "¿Rebobinar a este punto? Los cambios de archivos después de este mensaje serán revertidos. El rebobinado no afecta archivos editados manualmente o mediante bash.",
       "confirmButton": "Rebobinar",
@@ -104,6 +110,10 @@
     "renderer": {
       "copyMessage": "Copiar mensaje",
       "copied": "¡Copiado!",
+      "editMessage": "Editar mensaje",
+      "editCancel": "Cancelar",
+      "editSend": "Reenviar",
+      "waiting": "Esperando respuesta...",
       "saved": "¡guardado!",
       "saveToNote": "Guardar en nota",
       "saveSession": "Guardar conversación",

@@ -28,6 +28,7 @@ import type {
   McpServerSelector,
   ModelCommandButton,
   PermissionToggle,
+  SendButton,
   StatusPanel,
   ThinkingBudgetSelector,
 } from '../ui';
@@ -134,6 +135,7 @@ export interface TabUIComponents {
   externalContextSelector: ExternalContextSelector | null;
   mcpServerSelector: McpServerSelector | null;
   permissionToggle: PermissionToggle | null;
+  sendButton: SendButton | null;
   slashCommandDropdown: SlashCommandDropdown | null;
   modelDropdown: ModelDropdown | null;
   instructionModeManager: InstructionModeManager | null;

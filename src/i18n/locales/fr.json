@@ -53,9 +53,15 @@
         "preview": "Aperçu",
         "edit": "Modifier"
       }
-    }
+    },
+    "enable": "Activer",
+    "disable": "Désactiver"
   },
   "chat": {
+    "toolbar": {
+      "send": "Envoyer le message",
+      "stop": "Arrêter la génération"
+    },
     "rewind": {
       "confirmMessage": "Rembobiner jusqu'à ce point ? Les modifications de fichiers après ce message seront annulées. Le rembobinage n'affecte pas les fichiers modifiés manuellement ou via bash.",
       "confirmButton": "Rembobiner",
@@ -104,6 +110,10 @@
     "renderer": {
       "copyMessage": "Copier le message",
       "copied": "Copié !",
+      "editMessage": "Modifier le message",
+      "editCancel": "Annuler",
+      "editSend": "Renvoyer",
+      "waiting": "En attente de réponse...",
       "saved": "enregistré !",
       "saveToNote": "Enregistrer dans la note",
       "saveSession": "Enregistrer la conversation",

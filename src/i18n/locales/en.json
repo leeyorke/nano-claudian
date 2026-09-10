@@ -5,6 +5,8 @@
     "dropFileMessage": "Drop files or folders here to add to your message",
     "edit": "Edit",
     "delete": "Delete",
+    "add": "Add",
+    "remove": "Remove",
     "clear": "Clear",
     "clearAll": "Clear all",
     "loading": "Loading",
@@ -15,7 +17,9 @@
     "settingsText": "Settings",
     "advanced": "Advanced",
     "enabled": "Enabled",
+    "enable": "Enable",
     "disabled": "Disabled",
+    "disable": "Disable",
     "platform": "Platform",
     "refresh": "Refresh",
     "rewind": "Rewind",
@@ -54,6 +58,10 @@
     }
   },
   "chat": {
+    "toolbar": {
+      "send": "Send message",
+      "stop": "Stop generating"
+    },
     "rewind": {
       "confirmMessage": "Rewind to this point? File changes after this message will be reverted. Rewinding does not affect files edited manually or via bash.",
       "confirmButton": "Rewind",
@@ -102,6 +110,10 @@
     "renderer": {
       "copyMessage": "Copy message",
       "copied": "Copied!",
+      "editMessage": "Edit message",
+      "editCancel": "Cancel",
+      "editSend": "Resend",
+      "waiting": "Waiting for response...",
       "saved": "Saved!",
       "saveToNote": "Save to Note",
       "saveSession": "Save conversation",

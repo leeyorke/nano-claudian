@@ -908,6 +908,88 @@ describe('ConversationController', () => {
   });
 });
 
+describe('ConversationController - editAndResend', () => {
+  function makeMsgs() {
+    return [
+      { id: 'a1', role: 'assistant', content: 'prev', sdkAssistantUuid: 'asst-prev', timestamp: 1, toolCalls: [], contentBlocks: [] },
+      { id: 'u1', role: 'user', content: 'original text', sdkUserUuid: 'user-1', timestamp: 2, toolCalls: [], contentBlocks: [] },
+      { id: 'a2', role: 'assistant', content: 'reply', sdkAssistantUuid: 'asst-2', timestamp: 3, toolCalls: [], contentBlocks: [] },
+    ] as any[];
+  }
+
+  function makeEditDeps(overrides: Partial<ConversationControllerDeps> = {}) {
+    const sendMessage = jest.fn().mockResolvedValue(undefined);
+    const rewind = jest.fn().mockResolvedValue({ canRewind: true, filesChanged: [] });
+    const deps = createMockDeps({
+      getAgentService: () => ({ rewind }) as any,
+      getInputController: () => ({ sendMessage }) as any,
+      ...overrides,
+    });
+    return { deps, sendMessage, rewind };
+  }
+
+  it('should rewind, truncate and resend with the edited content', async () => {
+    const { deps, sendMessage, rewind } = makeEditDeps();
+    deps.state.messages = makeMsgs();
+    const controller = new ConversationController(deps);
+    const saveSpy = jest.spyOn(controller, 'save').mockResolvedValue(undefined);
+
+    await controller.editAndResend('u1', 'edited text');
+
+    expect(rewind).toHaveBeenCalledWith('user-1', 'asst-prev');
+    expect(deps.state.messages.some(m => m.id === 'u1')).toBe(false);
+    expect(sendMessage).toHaveBeenCalledWith({ content: 'edited text' });
+    // Must not prefill the input box
+    expect(deps.getInputEl().value).toBe('');
+    expect(saveSpy).toHaveBeenCalledWith(false, { resumeSessionAt: 'asst-prev' });
+
+    saveSpy.mockRestore();
+  });
+
+  it('should refuse while streaming', async () => {
+    const { deps, sendMessage } = makeEditDeps();
+    deps.state.messages = makeMsgs();
+    deps.state.isStreaming = true;
+    const controller = new ConversationController(deps);
+
+    await controller.editAndResend('u1', 'edited');
+
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(mockNotice).toHaveBeenCalled();
+  });
+
+  it('should refuse when the user message has no sdk uuid', async () => {
+    const { deps, sendMessage } = makeEditDeps();
+    const msgs = makeMsgs();
+    delete msgs[1].sdkUserUuid;
+    deps.state.messages = msgs;
+    const controller = new ConversationController(deps);
+
+    await controller.editAndResend('u1', 'edited');
+
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(mockNotice).toHaveBeenCalled();
+  });
+
+  it('should edit the first message without an SDK rewind when there is no previous assistant uuid', async () => {
+    const { deps, sendMessage, rewind } = makeEditDeps();
+    deps.state.messages = [
+      { id: 'u1', role: 'user', content: 'original text', sdkUserUuid: 'user-1', timestamp: 1, toolCalls: [], contentBlocks: [] },
+      { id: 'a2', role: 'assistant', content: 'reply', sdkAssistantUuid: 'asst-2', timestamp: 2, toolCalls: [], contentBlocks: [] },
+    ] as any[];
+    const controller = new ConversationController(deps);
+    const saveSpy = jest.spyOn(controller, 'save').mockResolvedValue(undefined);
+
+    await controller.editAndResend('u1', 'edited text');
+
+    expect(rewind).not.toHaveBeenCalled();
+    expect(sendMessage).toHaveBeenCalledWith({ content: 'edited text' });
+    expect(saveSpy).toHaveBeenCalledWith(false, { resumeSessionAt: undefined });
+
+    saveSpy.mockRestore();
+  });
+});
+
 describe('ConversationController - Callbacks', () => {
   it('should call onNewConversation callback', async () => {
     const onNewConversation = jest.fn();

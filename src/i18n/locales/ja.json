@@ -53,9 +53,15 @@
         "preview": "プレビュー",
         "edit": "編集"
       }
-    }
+    },
+    "enable": "有効化",
+    "disable": "無効化"
   },
   "chat": {
+    "toolbar": {
+      "send": "メッセージを送信",
+      "stop": "生成を停止"
+    },
     "rewind": {
       "confirmMessage": "この時点に巻き戻しますか？このメッセージ以降のファイル変更が元に戻されます。手動またはbashで編集されたファイルには影響しません。",
       "confirmButton": "巻き戻す",
@@ -104,6 +110,10 @@
     "renderer": {
       "copyMessage": "メッセージをコピー",
       "copied": "コピーしました！",
+      "editMessage": "メッセージを編集",
+      "editCancel": "キャンセル",
+      "editSend": "再送信",
+      "waiting": "応答を待っています...",
       "saved": "保存しました!",
       "saveToNote": "ノートに保存",
       "saveSession": "会話を保存",

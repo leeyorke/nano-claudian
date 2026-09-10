@@ -77,6 +77,7 @@ export function createTab(options: TabCreateOptions): TabData {
   const state = new ChatState({
     onStreamingStateChanged: (isStreaming) => {
       onStreamingChanged?.(isStreaming);
+      tab.ui.sendButton?.update();
     },
     onAttentionChanged: (needsAttention) => {
       onAttentionChanged?.(needsAttention);
@@ -125,6 +126,7 @@ export function createTab(options: TabCreateOptions): TabData {
       externalContextSelector: null,
       mcpServerSelector: null,
       permissionToggle: null,
+      sendButton: null,
       slashCommandDropdown: null,
       modelDropdown: null,
       instructionModeManager: null,
@@ -577,6 +579,16 @@ function initializeInputToolbar(
       await plugin.saveSettings();
       dom.inputWrapper.toggleClass('claudian-input-plan-mode', mode === 'plan');
     },
+    onSend: () => {
+      void tab.controllers.inputController?.sendMessage();
+    },
+    onCancel: () => {
+      tab.controllers.inputController?.cancelStreaming();
+    },
+    getIsStreaming: () => tab.state.isStreaming,
+    canSend: () =>
+      dom.inputEl.value.trim().length > 0 ||
+      (tab.ui.imageContextManager?.hasImages() ?? false),
   });
 
   tab.ui.modelCommandBtn = toolbarComponents.modelCommandBtn;
@@ -585,6 +597,7 @@ function initializeInputToolbar(
   tab.ui.externalContextSelector = toolbarComponents.externalContextSelector;
   tab.ui.mcpServerSelector = toolbarComponents.mcpServerSelector;
   tab.ui.permissionToggle = toolbarComponents.permissionToggle;
+  tab.ui.sendButton = toolbarComponents.sendButton;
 
   tab.ui.mcpServerSelector.setMcpManager(plugin.mcpManager);
 
@@ -886,6 +899,7 @@ export function initializeTabControllers(
     forkRequestCallback
       ? (id) => handleForkRequest(tab, plugin, id, forkRequestCallback)
       : undefined,
+    (id, text) => tab.controllers.conversationController!.editAndResend(id, text),
   );
 
   // Selection controller
@@ -965,6 +979,7 @@ export function initializeTabControllers(
       getTitleGenerationService: () => services.titleGenerationService,
       getStatusPanel: () => ui.statusPanel,
       getAgentService: () => tab.service, // Use tab's service instead of plugin's
+      getInputController: () => tab.controllers.inputController,
     },
     {}
   );
@@ -1149,6 +1164,7 @@ export function wireTabInputEvents(tab: TabData, plugin: ClaudianPlugin): void {
     syncBangBashSuppression();
     // Auto-resize textarea based on content
     autoResizeTextarea(dom.inputEl);
+    ui.sendButton?.update();
   };
   dom.inputEl.addEventListener('input', inputHandler);
   dom.eventCleanups.push(() => dom.inputEl.removeEventListener('input', inputHandler));

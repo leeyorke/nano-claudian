@@ -28,11 +28,14 @@ export class MessageRenderer {
   private messagesEl: HTMLElement;
   private rewindCallback?: (messageId: string) => Promise<void>;
   private forkCallback?: (messageId: string) => Promise<void>;
+  private editCallback?: (messageId: string, newContent: string) => Promise<void>;
   private liveMessageEls = new Map<string, HTMLElement>();
 
   private static readonly REWIND_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`;
 
   private static readonly FORK_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9"/><path d="M12 12v3"/></svg>`;
+
+  private static readonly EDIT_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>`;
 
   constructor(
     plugin: ClaudianPlugin,
@@ -40,6 +43,7 @@ export class MessageRenderer {
     messagesEl: HTMLElement,
     rewindCallback?: (messageId: string) => Promise<void>,
     forkCallback?: (messageId: string) => Promise<void>,
+    editCallback?: (messageId: string, newContent: string) => Promise<void>,
   ) {
     this.app = plugin.app;
     this.plugin = plugin;
@@ -47,6 +51,7 @@ export class MessageRenderer {
     this.messagesEl = messagesEl;
     this.rewindCallback = rewindCallback;
     this.forkCallback = forkCallback;
+    this.editCallback = editCallback;
 
     // Register delegated click handler for file links
     registerFileLinkHandler(this.app, this.messagesEl, this.component);
@@ -108,6 +113,9 @@ export class MessageRenderer {
         const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
         void this.renderContent(textEl, textToShow);
         this.addUserCopyButton(msgEl, textToShow);
+        if (this.editCallback) {
+          this.addUserEditButton(msgEl, msg.id, textToShow);
+        }
       }
       if (this.rewindCallback || this.forkCallback) {
         this.liveMessageEls.set(msg.id, msgEl);
@@ -200,6 +208,9 @@ export class MessageRenderer {
         const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
         void this.renderContent(textEl, textToShow);
         this.addUserCopyButton(msgEl, textToShow);
+        if (this.editCallback && msg.sdkUserUuid) {
+          this.addUserEditButton(msgEl, msg.id, textToShow);
+        }
       }
       if (msg.sdkUserUuid && this.isRewindEligible(allMessages, index)) {
         if (this.rewindCallback) {
@@ -835,9 +846,19 @@ export class MessageRenderer {
   }
 
   private getOrCreateActionsToolbar(msgEl: HTMLElement): HTMLElement {
-    const existing = msgEl.querySelector('.claudian-user-msg-actions') as HTMLElement | null;
+    // Prefer the bubble (message content) so the toolbar's right edge aligns with
+    // the bubble's right edge instead of the full-width message container.
+    const bubbleEl = msgEl.querySelector('.claudian-message-content') as HTMLElement | null;
+    const parent = bubbleEl ?? msgEl;
+    const existing = parent.querySelector('.claudian-user-msg-actions') as HTMLElement | null;
     if (existing) return existing;
-    return msgEl.createDiv({ cls: 'claudian-user-msg-actions' });
+    // Back-compat: toolbar previously lived on msgEl directly
+    const legacy = msgEl.querySelector(':scope > .claudian-user-msg-actions') as HTMLElement | null;
+    if (legacy) {
+      parent.appendChild(legacy);
+      return legacy;
+    }
+    return parent.createDiv({ cls: 'claudian-user-msg-actions' });
   }
 
   private addUserCopyButton(msgEl: HTMLElement, content: string): void {
@@ -867,8 +888,94 @@ export class MessageRenderer {
     });
   }
 
-  private addRewindButton(msgEl: HTMLElement, messageId: string): void {
+  private addUserEditButton(msgEl: HTMLElement, messageId: string, currentText: string): void {
     const toolbar = this.getOrCreateActionsToolbar(msgEl);
+    if (toolbar.querySelector('.claudian-user-msg-edit-btn')) return;
+
+    const editBtn = toolbar.createSpan({ cls: 'claudian-user-msg-edit-btn' });
+    // Edit sits left of copy
+    const copyBtn = toolbar.querySelector('.claudian-user-msg-copy-btn');
+    if (copyBtn) toolbar.insertBefore(editBtn, copyBtn);
+    editBtn.innerHTML = MessageRenderer.EDIT_ICON;
+    editBtn.setAttribute('aria-label', t('chat.renderer.editMessage'));
+
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.openInlineEditor(msgEl, messageId, currentText);
+    });
+  }
+
+  private openInlineEditor(msgEl: HTMLElement, messageId: string, currentText: string): void {
+    const contentEl = msgEl.querySelector('.claudian-message-content') as HTMLElement | null;
+    const textBlock = msgEl.querySelector('.claudian-text-block') as HTMLElement | null;
+    const toolbar = msgEl.querySelector('.claudian-user-msg-actions') as HTMLElement | null;
+    if (!contentEl || !textBlock) return;
+    if (contentEl.querySelector('.claudian-user-msg-edit-input')) return; // already editing
+
+    textBlock.style.display = 'none';
+    if (toolbar) toolbar.style.display = 'none';
+    // Neutralize the bubble so the editor card is the only visual container
+    contentEl.addClass('claudian-message-editing');
+
+    const editorEl = contentEl.createDiv({ cls: 'claudian-user-msg-edit' });
+    const textarea = editorEl.createEl('textarea', { cls: 'claudian-user-msg-edit-input' });
+    textarea.value = currentText;
+    textarea.setAttribute('dir', 'auto');
+
+    const actionsEl = editorEl.createDiv({ cls: 'claudian-user-msg-edit-actions' });
+    const cancelBtn = actionsEl.createEl('button', {
+      cls: 'claudian-user-msg-edit-cancel-btn',
+      text: t('chat.renderer.editCancel'),
+    });
+    const sendBtn = actionsEl.createEl('button', {
+      cls: 'claudian-user-msg-edit-send-btn',
+      text: t('chat.renderer.editSend'),
+    });
+
+    const syncSendDisabled = () => {
+      sendBtn.disabled = textarea.value.trim().length === 0;
+    };
+    syncSendDisabled();
+    textarea.addEventListener('input', syncSendDisabled);
+
+    const closeEditor = () => {
+      editorEl.remove();
+      contentEl.removeClass('claudian-message-editing');
+      textBlock.style.display = '';
+      if (toolbar) toolbar.style.display = '';
+    };
+
+    cancelBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeEditor();
+    });
+
+    sendBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const newContent = textarea.value.trim();
+      if (!newContent || !this.editCallback) return;
+      try {
+        await this.editCallback(messageId, newContent);
+        // On success the message list is re-rendered by editAndResend
+      } catch (err) {
+        new Notice(t('chat.rewind.failed', { error: err instanceof Error ? err.message : 'Unknown error' }));
+        closeEditor();
+      }
+    });
+
+    // Size the textarea to its content — the card and button row grow with it
+    const resize = () => {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    };
+    textarea.addEventListener('input', resize);
+    resize();
+    textarea.focus();
+    // Put the cursor at the end
+    textarea.setSelectionRange?.(currentText.length, currentText.length);
+  }
+
+  private addRewindButton(msgEl: HTMLElement, messageId: string): void {    const toolbar = this.getOrCreateActionsToolbar(msgEl);
     const btn = toolbar.createSpan({ cls: 'claudian-message-rewind-btn' });
     if (toolbar.firstChild !== btn) toolbar.insertBefore(btn, toolbar.firstChild);
     btn.innerHTML = MessageRenderer.REWIND_ICON;

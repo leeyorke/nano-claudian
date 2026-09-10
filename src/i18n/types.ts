@@ -70,6 +70,18 @@ export type TranslationKey =
   | 'chat.fork.commandNoMessages'
   | 'chat.fork.commandNoAssistantUuid'
 
+  // Chat - Toolbar
+  | 'chat.toolbar.send'
+  | 'chat.toolbar.stop'
+
+  // Chat - Renderer
+  | 'chat.renderer.copyMessage'
+  | 'chat.renderer.copied'
+  | 'chat.renderer.editMessage'
+  | 'chat.renderer.editCancel'
+  | 'chat.renderer.editSend'
+  | 'chat.renderer.waiting'
+
   // Settings - Customization
   | 'settings.title'
   | 'settings.customization'

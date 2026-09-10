@@ -55,6 +55,9 @@ Tests mirror `src/` structure in `tests/unit/` and `tests/integration/`.
 
 ## Development Notes
 
+- **Version bump**: After any user-visible change (feature or bug fix), bump `package.json` version BEFORE committing — patch for bug fixes, minor for features. Then run `npm run version` to sync `manifest.json`. Include the version in the commit message (e.g. `(v2.2.1)`).
+- **Docs update**: When a change alters component behavior or architecture, update the relevant `CLAUDE.md` (root or the affected layer's, e.g. `src/features/chat/CLAUDE.md`) in the same commit.
+
 - **SDK-first**: Proactively use native Claude SDK features over custom implementations. If the SDK provides a capability, use it — do not reinvent it. This ensures compatibility with Claude Code.
 - **SDK exploration**: When developing SDK-related features, write a throwaway test script (e.g., in `dev/`) that calls the real SDK to observe actual response shapes, event sequences, and edge cases. Real output lands in `~/.claude/` or `{vault}/.claude/` — inspect those files to understand patterns and formats. Run this before writing implementation or tests — real output beats guessing at types and formats. This is the default first step for any SDK integration work.
 - **Comments**: Only comment WHY, not WHAT. No JSDoc that restates the function name (`/** Get servers. */` on `getServers()`), no narrating inline comments (`// Create the channel` before `new Channel()`), no module-level docs on barrel `index.ts` files. Keep JSDoc only when it adds non-obvious context (edge cases, constraints, surprising behavior).

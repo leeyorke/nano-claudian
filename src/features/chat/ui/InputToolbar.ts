@@ -19,7 +19,7 @@ import {
   THINKING_BUDGETS
 } from '../../../core/types';
 import { t } from '../../../i18n';
-import { CHECK_ICON_SVG, MCP_ICON_SVG } from '../../../shared/icons';
+import { CHECK_ICON_SVG, MCP_ICON_SVG, SEND_ICON_SVG, STOP_ICON_SVG } from '../../../shared/icons';
 import {
   getEnvironmentModelForAlias,
   getModelOptionsFromEnvironment,
@@ -47,6 +47,10 @@ export interface ToolbarCallbacks {
   onInsertCommand?: (command: string) => void;
   onHideModelDropdown?: () => void;
   getSdkModels?: () => Promise<{ value: string; label: string; description?: string }[]>;
+  onSend?: () => void;
+  onCancel?: () => void;
+  getIsStreaming?: () => boolean;
+  canSend?: () => boolean;
 }
 
 /** Tooltip keeps the friendly name since the button shows the full model id. */
@@ -374,6 +378,55 @@ export class ThinkingBudgetSelector {
     } else {
       this.renderBudgetGears();
     }
+  }
+}
+
+export class SendButton {
+  private container: HTMLElement;
+  private buttonEl: HTMLElement | null = null;
+  private callbacks: ToolbarCallbacks;
+  private isStreaming = false;
+
+  constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
+    this.callbacks = callbacks;
+    this.container = parentEl.createDiv({ cls: 'claudian-send-btn-container' });
+    this.render();
+  }
+
+  private render() {
+    this.buttonEl = this.container.createDiv({ cls: 'claudian-send-btn ready' });
+    this.update();
+
+    this.buttonEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.isStreaming) {
+        this.callbacks.onCancel?.();
+      } else {
+        this.callbacks.onSend?.();
+      }
+    });
+  }
+
+  update() {
+    if (!this.buttonEl) return;
+    this.isStreaming = this.callbacks.getIsStreaming?.() ?? false;
+
+    if (this.isStreaming) {
+      this.buttonEl.addClass('claudian-send-btn--stop');
+      this.buttonEl.removeClass('disabled');
+      this.buttonEl.innerHTML = STOP_ICON_SVG;
+      this.buttonEl.setAttribute('aria-label', t('chat.toolbar.stop'));
+    } else {
+      this.buttonEl.removeClass('claudian-send-btn--stop');
+      const canSend = this.callbacks.canSend?.() ?? true;
+      this.buttonEl.toggleClass('disabled', !canSend);
+      this.buttonEl.innerHTML = SEND_ICON_SVG;
+      this.buttonEl.setAttribute('aria-label', t('chat.toolbar.send'));
+    }
+  }
+
+  destroy() {
+    this.container.empty();
   }
 }
 
@@ -1089,13 +1142,17 @@ export function createInputToolbar(
   mcpServerSelector: McpServerSelector;
   permissionToggle: PermissionToggle;
   skillCommandBtn: SlashCommandButton;
+  sendButton: SendButton;
 } {
   const modelCommandBtn = new ModelCommandButton(parentEl, callbacks);
   const thinkingBudgetSelector = new ThinkingBudgetSelector(parentEl, callbacks);
   const contextUsageMeter = new ContextUsageMeter(parentEl);
   const skillCommandBtn = new SlashCommandButton(parentEl, callbacks, `✨ ${t('common.skills' as any)}`, '');
   const externalContextSelector = new ExternalContextSelector(parentEl, callbacks);
-  const mcpServerSelector = new McpServerSelector(parentEl);
+  // PermissionToggle before MCP: `margin-left:auto` pushes it and everything after it right,
+  // so the send button lands rightmost with yolo one slot left of it.
   const permissionToggle = new PermissionToggle(parentEl, callbacks);
-  return { modelCommandBtn, thinkingBudgetSelector, contextUsageMeter, externalContextSelector, mcpServerSelector, permissionToggle, skillCommandBtn };
+  const mcpServerSelector = new McpServerSelector(parentEl);
+  const sendButton = new SendButton(parentEl, callbacks);
+  return { modelCommandBtn, thinkingBudgetSelector, contextUsageMeter, externalContextSelector, mcpServerSelector, permissionToggle, skillCommandBtn, sendButton };
 }

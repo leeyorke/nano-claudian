@@ -1,0 +1,43 @@
+/* Send/Stop circular button (rightmost toolbar slot) */
+.claudian-send-btn-container {
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  padding-right: 4px;
+}
+
+.claudian-send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--claudian-brand, var(--interactive-accent));
+  color: var(--text-on-accent);
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.claudian-send-btn:hover {
+  filter: brightness(1.1);
+}
+
+.claudian-send-btn:active {
+  transform: scale(0.94);
+}
+
+.claudian-send-btn.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.claudian-send-btn--stop {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  box-shadow: 0 0 0 1px var(--background-modifier-border);
+}
+
+.claudian-send-btn--stop:hover {
+  background: var(--background-modifier-active-hover);
+}

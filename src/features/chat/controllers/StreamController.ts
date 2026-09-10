@@ -15,6 +15,7 @@ import {
 } from '../../../core/tools/toolNames';
 import type { ChatMessage, StreamChunk, SubagentInfo, ToolCallInfo } from '../../../core/types';
 import type { SDKToolUseResult } from '../../../core/types/diff';
+import { t } from '../../../i18n';
 import type ClaudianPlugin from '../../../main';
 import { formatDurationMmSs } from '../../../utils/date';
 import { extractDiffData } from '../../../utils/diff';
@@ -878,6 +879,8 @@ export class StreamController {
 
   /** Debounce delay before showing thinking indicator (ms). */
   private static readonly THINKING_INDICATOR_DELAY = 400;
+  /** Shorter delay for the pre-response waiting bubble (no assistant container yet). */
+  private static readonly WAITING_INDICATOR_DELAY = 150;
 
   /**
    * Schedules showing the thinking indicator after a delay.
@@ -887,9 +890,6 @@ export class StreamController {
    */
   showThinkingIndicator(overrideText?: string, overrideCls?: string): void {
     const { state } = this.deps;
-
-    // Early return if no content element
-    if (!state.currentContentEl) return;
 
     // Clear any existing timeout
     if (state.thinkingIndicatorTimeout) {
@@ -904,16 +904,31 @@ export class StreamController {
 
     // If indicator already exists, just re-append it to the bottom
     if (state.thinkingEl) {
-      state.currentContentEl.appendChild(state.thinkingEl);
+      if (state.currentContentEl) {
+        state.currentContentEl.appendChild(state.thinkingEl);
+      } else {
+        this.deps.getMessagesEl().appendChild(state.thinkingEl);
+      }
       this.deps.updateQueueIndicator();
       return;
     }
 
+    const waiting = !state.currentContentEl;
+
     // Schedule showing the indicator after a delay
     state.thinkingIndicatorTimeout = setTimeout(() => {
       state.thinkingIndicatorTimeout = null;
-      // Double-check we still have a content element, no indicator exists, and no thinking block
-      if (!state.currentContentEl || state.thinkingEl || state.currentThinkingState) return;
+      // Double-check no indicator exists and no thinking block
+      if (state.thinkingEl || state.currentThinkingState) return;
+
+      if (!state.currentContentEl) {
+        // No assistant container yet: show a waiting bubble at the messages bottom
+        const waitingEl = this.deps.getMessagesEl().createDiv({ cls: 'claudian-thinking claudian-thinking--waiting' });
+        waitingEl.createSpan({ cls: 'claudian-inline-spinner' });
+        waitingEl.createSpan({ text: t('chat.renderer.waiting') });
+        state.thinkingEl = waitingEl;
+        return;
+      }
 
       const cls = overrideCls
         ? `claudian-thinking ${overrideCls}`
@@ -948,7 +963,7 @@ export class StreamController {
       // Queue indicator line (initially hidden)
       state.queueIndicatorEl = state.thinkingEl.createDiv({ cls: 'claudian-queue-indicator' });
       this.deps.updateQueueIndicator();
-    }, StreamController.THINKING_INDICATOR_DELAY);
+    }, waiting ? StreamController.WAITING_INDICATOR_DELAY : StreamController.THINKING_INDICATOR_DELAY);
   }
 
   /** Hides the thinking indicator and cancels any pending show timeout. */

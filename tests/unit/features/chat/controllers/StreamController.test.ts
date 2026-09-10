@@ -733,6 +733,40 @@ describe('StreamController - Text Content', () => {
     });
   });
 
+  describe('Waiting indicator (no content element yet)', () => {
+    it('should show waiting indicator at messages bottom when currentContentEl is null', () => {
+      deps.state.currentContentEl = null;
+      const messagesEl = deps.getMessagesEl();
+
+      controller.showThinkingIndicator();
+      jest.advanceTimersByTime(200);
+
+      expect(deps.state.thinkingEl).not.toBeNull();
+      expect(deps.state.thinkingEl?.hasClass('claudian-thinking--waiting')).toBe(true);
+      // Appended directly to the messages container
+      expect(messagesEl.children[messagesEl.children.length - 1]).toBe(deps.state.thinkingEl);
+
+      controller.hideThinkingIndicator();
+      expect(deps.state.thinkingEl).toBeNull();
+    });
+
+    it('should migrate waiting indicator into content element when it appears', () => {
+      deps.state.currentContentEl = null;
+
+      controller.showThinkingIndicator();
+      jest.advanceTimersByTime(200);
+      expect(deps.state.thinkingEl?.hasClass('claudian-thinking--waiting')).toBe(true);
+
+      // Content element appears; next showThinkingIndicator call should re-append into it
+      const contentEl = createMockEl();
+      deps.state.currentContentEl = contentEl as any;
+      controller.showThinkingIndicator();
+      jest.advanceTimersByTime(500);
+
+      expect(contentEl.children.length).toBeGreaterThan(0);
+    });
+  });
+
   describe('Tool handling - continued', () => {
     it('should handle multiple pending tools and flush in order', async () => {
       const { renderToolCall } = jest.requireMock('@/features/chat/rendering');
@@ -816,13 +850,16 @@ describe('StreamController - Text Content', () => {
   });
 
   describe('Thinking indicator - edge cases', () => {
-    it('should not show indicator when no currentContentEl', () => {
+    it('should show the waiting bubble at the messages bottom when no currentContentEl', () => {
       deps.state.currentContentEl = null;
+      const messagesEl = deps.getMessagesEl();
 
       controller.showThinkingIndicator();
       jest.advanceTimersByTime(500);
 
-      expect(deps.state.thinkingEl).toBeNull();
+      expect(deps.state.thinkingEl).not.toBeNull();
+      expect(deps.state.thinkingEl?.hasClass('claudian-thinking--waiting')).toBe(true);
+      expect(messagesEl.children[messagesEl.children.length - 1]).toBe(deps.state.thinkingEl);
     });
 
     it('should not show indicator when currentThinkingState is active', () => {

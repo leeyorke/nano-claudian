@@ -211,7 +211,9 @@
   font-style: italic;
 }
 
-/* Action buttons toolbar below user messages */
+/* Action buttons toolbar below user messages.
+   Lives inside .claudian-message-content (the bubble) so its right edge
+   aligns with the bubble edge, not the full-width message container. */
 .claudian-user-msg-actions {
   position: absolute;
   bottom: -20px;
@@ -221,6 +223,10 @@
   opacity: 0;
   transition: opacity 0.15s;
   z-index: 1;
+}
+
+.claudian-message-user .claudian-message-content {
+  position: relative;
 }
 
 .claudian-message-user:hover .claudian-user-msg-actions {
@@ -249,6 +255,99 @@
   color: var(--text-accent);
   font-size: 11px;
   font-family: var(--font-monospace);
+}
+
+/* Inline editor for editing an already-sent user message.
+   While editing, the user bubble (dark background container) is neutralized so
+   the white editor card is the only visual container:
+   page background → rounded white card → input + buttons. */
+.claudian-message-user .claudian-message-content.claudian-message-editing {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+/* Inline editor card — the only visual container. Its border is the focus
+   indicator: brand orange while the editor is open (container focus state,
+   driven by the textarea via :focus-within). */
+.claudian-user-msg-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--background-primary);
+  border: 1px solid var(--claudian-brand);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+}
+
+.claudian-user-msg-edit-input {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  padding: 10px 12px;
+  /* !important to fully suppress Obsidian's native textarea styling */
+  border: none !important;
+  border-radius: 8px;
+  background: transparent !important;
+  color: var(--text-normal);
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.5;
+  overflow-y: hidden;
+  resize: none;
+  outline: none;
+  box-shadow: none !important;
+}
+
+.claudian-user-msg-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+button.claudian-user-msg-edit-cancel-btn,
+button.claudian-user-msg-edit-send-btn {
+  cursor: pointer;
+  padding: 5px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+/* Cancel — secondary */
+button.claudian-user-msg-edit-cancel-btn {
+  border: 1px solid var(--background-modifier-border);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+button.claudian-user-msg-edit-cancel-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* Resend — primary (brand orange, matching the toolbar send button).
+   Element-type selectors keep this above Obsidian's default button styling. */
+button.claudian-user-msg-edit-send-btn {
+  border: 1px solid transparent;
+  background: var(--claudian-brand);
+  color: var(--text-on-accent, #fff);
+  box-shadow: none;
+}
+
+button.claudian-user-msg-edit-send-btn:hover {
+  filter: brightness(1.08);
+}
+
+button.claudian-user-msg-edit-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: none;
 }
 
 /* Compact boundary indicator */

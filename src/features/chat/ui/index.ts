@@ -9,6 +9,7 @@ export {
   McpServerSelector,
   ModelCommandButton,
   PermissionToggle,
+  SendButton,
   SlashCommandButton,
   ThinkingBudgetSelector,
 } from './InputToolbar';

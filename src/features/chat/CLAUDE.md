@@ -34,7 +34,7 @@ ClaudianView (lifecycle + assembly)
 │   ├── TabBar                  # Tab UI component
 │   └── Tab                     # Individual tab state + fork request handling
 └── UI Components
-    ├── InputToolbar            # ModelCommandButton, thinking, permissions, context meter
+    ├── InputToolbar            # ModelCommandButton, thinking, permissions, context meter, SendButton
     ├── FileContext             # @-mention chips and dropdown
     ├── ImageContext            # Image attachments
     ├── StatusPanel             # Todo/command output panels container
@@ -68,7 +68,7 @@ User Input → InputController → ClaudianService.query()
 
 | Renderer | Handles |
 |----------|---------|
-| `MessageRenderer` | Orchestrates all rendering, manages message containers, fork button on user messages |
+| `MessageRenderer` | Orchestrates all rendering, manages message containers, copy/edit buttons on user messages, fork button on user messages |
 | `ToolCallRenderer` | Tool use blocks with status, input display |
 | `ThinkingBlockRenderer` | Extended thinking with collapse/expand |
 | `WriteEditRenderer` | File operations with before/after diff |
@@ -111,6 +111,9 @@ for await (const message of response) {
 - Plan mode: `EnterPlanMode` is auto-approved by the SDK (detected in stream to sync UI); `ExitPlanMode` uses a dedicated callback in `canUseTool` that bypasses normal approval flow. Shift+Tab toggles plan mode and saves/restores the previous permission mode. "Approve (new session)" stops the current session and auto-sends plan content as the first message in a fresh session.
 - Bang-bash mode: `!` in empty input triggers direct bash execution (bypasses Claude). `BangBashModeManager` manages input mode; `BangBashService` runs commands via `child_process.exec` (30s timeout, 1MB buffer). Output displays in `StatusPanel` command panel. ESC exits mode; Enter submits.
 - Fork conversation: `Tab.handleForkRequest()` validates eligibility (not streaming, both user and preceding assistant messages have SDK UUIDs), deep clones messages up to the fork point, then delegates to `TabManager`. `/fork` command triggers `Tab.handleForkAll()`, which forks the entire conversation (all messages, resuming at the last assistant UUID). Both handlers share `resolveForkSource()` for session ID resolution and conversation metadata lookup. `TabManager` shows `ForkTargetModal` (new tab vs current tab), creates the fork conversation with `forkSource: { sessionId, resumeAt }` metadata, sets `sdkMessagesLoaded` to prevent duplicate message loading, and propagates title/currentNote. `ConversationController.switchTo()` detects fork metadata and sets `pendingForkSession`/`pendingResumeAt` on `ClaudianService` so the SDK resumes at the correct point. Fork titles are deduplicated across existing tabs.
+- Edit and resend: `ConversationController.editAndResend(messageId, newContent)` reuses the rewind machinery — SDK rewind (only when a previous assistant UUID exists; first-message edits skip it and rebuild history), `state.truncateAt`, save with `resumeSessionAt` — then re-sends via `inputController.sendMessage({ content })` instead of parking the text in the input box (unlike `rewind()`). `MessageRenderer`'s edit button (left of copy, both inside `.claudian-message-content` so the toolbar aligns with the bubble edge) opens an inline textarea editor with cancel/send.
+- Send/stop button: `SendButton` (rightmost toolbar slot; `PermissionToggle` sits one slot left and still carries `margin-left:auto`) sends on click via `InputController.sendMessage()` and becomes a stop button while `state.isStreaming` (click → `cancelStreaming()`). State changes reach it through `ChatState`'s `onStreamingStateChanged` callback; input-emptiness through the input `input` handler. Disabled when there is no text and no images (streaming state always clickable).
+- Waiting indicator: `StreamController.showThinkingIndicator()` no longer early-returns when `state.currentContentEl` is null — `InputController.sendMessage()` calls it right after `isStreaming = true` so a `claudian-thinking--waiting` bubble (spinner + "waiting" text) appears at the messages bottom within 150ms; it migrates into the assistant container once created.
 
 ### Model Selection
 

@@ -53,9 +53,15 @@
         "preview": "Vorschau",
         "edit": "Bearbeiten"
       }
-    }
+    },
+    "enable": "Aktivieren",
+    "disable": "Deaktivieren"
   },
   "chat": {
+    "toolbar": {
+      "send": "Nachricht senden",
+      "stop": "Generierung stoppen"
+    },
     "rewind": {
       "confirmMessage": "Zu diesem Punkt zurückspulen? Dateiänderungen nach dieser Nachricht werden rückgängig gemacht. Das Zurückspulen betrifft keine manuell oder über Bash bearbeiteten Dateien.",
       "confirmButton": "Zurückspulen",
@@ -104,6 +110,10 @@
     "renderer": {
       "copyMessage": "Nachricht kopieren",
       "copied": "Kopiert!",
+      "editMessage": "Nachricht bearbeiten",
+      "editCancel": "Abbrechen",
+      "editSend": "Erneut senden",
+      "waiting": "Warte auf Antwort...",
       "saved": "gespeichert!",
       "saveToNote": "In Notiz speichern",
       "saveSession": "Konversation speichern",

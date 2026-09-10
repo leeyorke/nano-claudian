@@ -188,6 +188,11 @@ export class InputController {
     state.autoScrollEnabled = plugin.settings.enableAutoScroll ?? true; // Reset auto-scroll based on setting
     const streamGeneration = state.bumpStreamGeneration();
 
+    // Show the pre-response waiting bubble immediately (currentContentEl is still
+    // null here); it migrates into the assistant container once that is created.
+    // The compact call below re-invokes with its own override text/class.
+    streamController.showThinkingIndicator();
+
     // Hide welcome message when sending first message
     const welcomeEl = this.deps.getWelcomeEl();
     if (welcomeEl) {
@@ -337,10 +342,11 @@ export class InputController {
     state.currentTextEl = null;
     state.currentTextContent = '';
 
-    streamController.showThinkingIndicator(
-      isCompact ? 'Compacting...' : undefined,
-      isCompact ? 'claudian-thinking--compact' : undefined,
-    );
+    // The waiting bubble scheduled at send time migrates into this container
+    // (existing-indicator branch); only /compact needs a fresh indicator here.
+    if (isCompact) {
+      streamController.showThinkingIndicator('Compacting...', 'claudian-thinking--compact');
+    }
     state.responseStartTime = performance.now();
 
     // Extract @-mentioned MCP servers from prompt

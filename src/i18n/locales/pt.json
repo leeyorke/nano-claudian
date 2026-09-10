@@ -53,9 +53,15 @@
         "preview": "Visualizar",
         "edit": "Editar"
       }
-    }
+    },
+    "enable": "Ativar",
+    "disable": "Desativar"
   },
   "chat": {
+    "toolbar": {
+      "send": "Enviar mensagem",
+      "stop": "Parar geração"
+    },
     "rewind": {
       "confirmMessage": "Retroceder até este ponto? As alterações de arquivos após esta mensagem serão revertidas. O retrocesso não afeta arquivos editados manualmente ou via bash.",
       "confirmButton": "Retroceder",
@@ -104,6 +110,10 @@
     "renderer": {
       "copyMessage": "Copiar mensagem",
       "copied": "Copiado!",
+      "editMessage": "Editar mensagem",
+      "editCancel": "Cancelar",
+      "editSend": "Reenviar",
+      "waiting": "Aguardando resposta...",
       "saved": "salvo!",
       "saveToNote": "Salvar na Nota",
       "saveSession": "Salvar conversa",
