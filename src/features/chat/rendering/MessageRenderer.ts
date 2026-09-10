@@ -756,19 +756,34 @@ export class MessageRenderer {
       const ss = String(now.getSeconds()).padStart(2, '0');
       const formattedTime = `${yyyy}${MM}${dd}-${hh}${mm}${ss}`;
       const fallbackFilename = `response-${formattedTime}.md`;
-        
+
+      // Prefer the active conversation's title (already auto-generated and shown
+      // in history) — only fall back to an LLM call when no title exists
+      let conversationTitle: string | null = null;
+      try {
+        const conversationId = this.plugin.getView?.()?.getActiveTab()?.state.currentConversationId;
+        if (conversationId) {
+          const conv = await this.plugin.getConversationById(conversationId);
+          conversationTitle = conv?.title?.trim() || null;
+        }
+      } catch {
+        // Best-effort — fall through to generation
+      }
+
       const saveModal = new SaveNoteModal(
-        this.app, 
-        t('chat.renderer.generatingTitle' as any) || 'Generating filename...', 
-        markdown, 
+        this.app,
+        conversationTitle
+          ? `${conversationTitle.replace(/[\\/:"*?<>|]/g, '').replace(/\s+/g, '-')}.md`
+          : t('chat.renderer.generatingTitle' as any) || 'Generating filename...',
+        markdown,
         async (filename, folderPath) => {
           try {
             // Construct full path
             const fullPath = folderPath === '/' ? filename : `${folderPath}/${filename}`;
-            
+
             // Create the file
             const file = await this.app.vault.create(fullPath, markdown);
-            
+
             // Open the file in a new leaf
             const leaf = this.app.workspace.getLeaf(true);
             await leaf.openFile(file);
@@ -789,9 +804,11 @@ export class MessageRenderer {
             throw err;
           }
         },
-        true // isGenerating = true
+        !conversationTitle // only show generating state when an LLM call is pending
       );
       saveModal.open();
+
+      if (conversationTitle) return; // prefilled — no LLM request needed
 
       // Call LLM to generate title
       try {

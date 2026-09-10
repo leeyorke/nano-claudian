@@ -59,6 +59,7 @@ export class SaveNoteModal extends Modal {
       this.filenameInput.setValue(newFilename);
       this.filenameInput.setDisabled(false);
       this.filenameInput.inputEl.style.color = '';
+      this.filenameInput.inputEl.style.caretColor = '';
       this.generatingOverlay?.remove();
       this.generatingOverlay = null;
       this.validateInput();
@@ -72,6 +73,7 @@ export class SaveNoteModal extends Modal {
       this.filenameInput.setValue(fallbackFilename);
       this.filenameInput.setDisabled(false);
       this.filenameInput.inputEl.style.color = '';
+      this.filenameInput.inputEl.style.caretColor = '';
       this.generatingOverlay?.remove();
       this.generatingOverlay = null;
       this.validateInput();

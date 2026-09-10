@@ -417,6 +417,14 @@ export class StreamController {
   // Text Block Management
   // ============================================
 
+  /** Full markdown re-render during streaming is O(n²) over a long response and
+   *  freezes the UI — throttle live renders to this interval; the finalize pass
+   *  always renders the complete text. */
+  private static readonly STREAMING_RENDER_INTERVAL = 150;
+  private lastStreamingRenderAt = 0;
+  private streamingRenderPending = false;
+  private scrollRafPending = false;
+
   async appendText(text: string): Promise<void> {
     const { state, renderer } = this.deps;
     if (!state.currentContentEl) return;
@@ -429,7 +437,31 @@ export class StreamController {
     }
 
     state.currentTextContent += text;
-    await renderer.renderContent(state.currentTextEl, state.currentTextContent);
+
+    // Fast path: append raw text to the DOM immediately, then throttle the
+    // full markdown re-render. The trailing render below keeps formatting live
+    // at a bounded rate instead of once per chunk.
+    state.currentTextEl.appendChild(document.createTextNode(text));
+
+    const now = performance.now();
+    if (now - this.lastStreamingRenderAt >= StreamController.STREAMING_RENDER_INTERVAL) {
+      this.lastStreamingRenderAt = now;
+      await renderer.renderContent(state.currentTextEl, state.currentTextContent);
+      return;
+    }
+
+    if (!this.streamingRenderPending) {
+      this.streamingRenderPending = true;
+      const delay = StreamController.STREAMING_RENDER_INTERVAL - (now - this.lastStreamingRenderAt);
+      setTimeout(() => {
+        this.streamingRenderPending = false;
+        // Still streaming the same text block → render the latest accumulated content
+        if (state.currentTextEl && state.currentTextContent) {
+          this.lastStreamingRenderAt = performance.now();
+          void renderer.renderContent(state.currentTextEl, state.currentTextContent);
+        }
+      }, Math.max(delay, 0));
+    }
   }
 
   finalizeCurrentTextBlock(msg?: ChatMessage): void {
@@ -439,6 +471,9 @@ export class StreamController {
       msg.contentBlocks.push({ type: 'text', content: state.currentTextContent });
       // Action buttons added here (not during streaming) to match history-loaded messages
       if (state.currentTextEl) {
+        // Throttled streaming may not have rendered the very last chunks —
+        // do one final full render so the persisted text is complete
+        void renderer.renderContent(state.currentTextEl, state.currentTextContent);
         renderer.addTextActionButtons(state.currentTextEl, state.currentTextContent);
       }
     }
@@ -1035,8 +1070,17 @@ export class StreamController {
     if (!(plugin.settings.enableAutoScroll ?? true)) return;
     if (!state.autoScrollEnabled) return;
 
-    const messagesEl = this.deps.getMessagesEl();
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    // Called per chunk — coalesce to one scroll per frame. Writing scrollTop
+    // forces a synchronous layout; doing it on every chunk freezes the UI on
+    // long responses.
+    if (this.scrollRafPending) return;
+    this.scrollRafPending = true;
+    requestAnimationFrame(() => {
+      this.scrollRafPending = false;
+      if (!state.autoScrollEnabled) return;
+      const messagesEl = this.deps.getMessagesEl();
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    });
   }
 
   resetStreamingState(): void {
@@ -1048,6 +1092,8 @@ export class StreamController {
     state.currentThinkingState = null;
     this.deps.subagentManager.resetStreamingState();
     state.pendingTools.clear();
+    this.streamingRenderPending = false;
+    this.lastStreamingRenderAt = 0;
     // Reset response timer (duration already captured at this point)
     state.responseStartTime = null;
   }

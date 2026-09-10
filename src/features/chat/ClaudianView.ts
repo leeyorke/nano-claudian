@@ -413,9 +413,24 @@ export class ClaudianView extends ItemView {
     const formattedTime = `${yyyy}${MM}${dd}-${hh}${mm}${ss}`;
     const fallbackFilename = `conversation-${formattedTime}.md`;
 
+    // Prefer the existing conversation title (auto-generated on first send and
+    // visible in history) — only fall back to an LLM call when no title exists
+    let conversationTitle: string | null = null;
+    const conversationId = activeTab.state.currentConversationId;
+    if (conversationId) {
+      try {
+        const conv = await this.plugin.getConversationById(conversationId);
+        conversationTitle = conv?.title?.trim() || null;
+      } catch {
+        // Best-effort — fall through to generation
+      }
+    }
+
     const saveModal = new SaveNoteModal(
       this.app,
-      t('chat.renderer.generatingTitle' as any),
+      conversationTitle
+        ? `${conversationTitle.replace(/[\\/:"*?<>|]/g, '').replace(/\s+/g, '-')}.md`
+        : t('chat.renderer.generatingTitle' as any),
       markdown,
       async (filename, folderPath) => {
         try {
@@ -430,9 +445,11 @@ export class ClaudianView extends ItemView {
           throw err;
         }
       },
-      true
+      !conversationTitle
     );
     saveModal.open();
+
+    if (conversationTitle) return; // prefilled — no LLM request needed
 
     // Generate a title using the LLM
     try {
